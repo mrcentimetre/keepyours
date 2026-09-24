@@ -83,8 +83,8 @@ h1 em{font-style:normal;background:linear-gradient(100deg,var(--green) 10%,var(-
 
 /* form card */
 .card{margin-top:14px;width:100%;max-width:560px;background:var(--glass);border:1px solid rgba(255,255,255,.7);box-shadow:var(--shadow);backdrop-filter:blur(18px);border-radius:28px;padding:26px 26px 22px}
-.card h2{font-family:var(--display);font-size:19px;margin:0 0 4px;font-weight:600}
-.card p{margin:0 0 16px;font-size:14px;color:var(--muted)}
+.card h2{font-family:var(--display);font-size:19px;margin:0 0 6px;font-weight:600}
+.card p{margin:0 0 22px;font-size:14px;color:var(--muted)}
 form{display:flex;gap:8px;background:var(--white);border:1px solid var(--line);border-radius:999px;padding:6px;box-shadow:inset 0 1px 2px rgba(8,45,28,.04)}
 input[type=email]{flex:1;min-width:0;border:0;background:transparent;padding:12px 16px;font:inherit;font-size:15px;color:var(--ink);outline:none}
 input[type=email]::placeholder{color:#93AA9E}
@@ -92,7 +92,7 @@ button{border:0;cursor:pointer;font:inherit;font-weight:600;font-size:15px;color
 button:hover{transform:translateY(-1px);box-shadow:0 12px 22px -10px rgba(22,184,98,1)}
 button:disabled{opacity:.6;cursor:default;transform:none}
 :focus-visible{outline:2px solid var(--green);outline-offset:3px;border-radius:999px}
-.note{margin:18px 0 2px;font-size:12.5px;color:var(--muted)}
+.note{margin:22px 0 4px;font-size:12.5px;color:var(--muted)}
 .msg{margin-top:14px;font-size:14px;display:none}
 .msg.ok{display:block;color:var(--green-deep);font-weight:500}
 .msg.err{display:block;color:#B23A3A}
@@ -166,7 +166,7 @@ footer a:hover{color:var(--green-deep)}
 <script>
 // Waitlist endpoint. Set this to your Formspree form URL (or any endpoint that
 // accepts a POST with JSON {email}). Until it's set, the form tells you.
-const ENDPOINT = ""; // e.g. "https://formspree.io/f/xxxxxxx"
+const ENDPOINT = "https://script.google.com/macros/s/AKfycbzx654y1oSLhvWFdyLbr45S-LafpjrflAVcqsIYPX5uYsEY_gSdedoyJCQUpJc7PODi8A/exec"; // e.g. "https://formspree.io/f/xxxxxxx"
 
 const form = document.getElementById('wl');
 const input = document.getElementById('email');
@@ -195,13 +195,21 @@ form.addEventListener('submit', async (e) => {
   const original = btn.textContent;
   btn.textContent = 'Saving…';
 
+  // Google Apps Script doesn't send CORS headers, so we post with mode:'no-cors'
+  // and a text/plain content type (which avoids a preflight request). The
+  // response can't be read, so a completed request is treated as success.
+  const isAppsScript = ENDPOINT.includes('script.google.com');
+
   try {
     const res = await fetch(ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      mode: isAppsScript ? 'no-cors' : 'cors',
+      headers: isAppsScript
+        ? { 'Content-Type': 'text/plain;charset=utf-8' }
+        : { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({ email, source: 'keepyours.xyz' })
     });
-    if (!res.ok) throw new Error('bad response');
+    if (!isAppsScript && !res.ok) throw new Error('bad response');
     form.style.display = 'none';
     say("You're on the list. I'll email you once, when it opens.", true);
   } catch (err) {
