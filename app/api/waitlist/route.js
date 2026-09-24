@@ -20,17 +20,20 @@ export async function POST(request) {
   }
 
   try {
-    // Apps Script sends no CORS headers, but this runs server-side so that
-    // doesn't matter. text/plain avoids a preflight and Apps Script reads
-    // the raw body from e.postData.contents either way.
+    // Apps Script runs doPost (and appends the row) first, then answers with a
+    // 302 to a one-shot result URL. Following that URL is unreliable: after a
+    // cold start it can 404 even though the row was saved. So we don't follow
+    // it; a 2xx/3xx from the first hop means the write happened.
+    // text/plain avoids a preflight; Apps Script reads e.postData.contents.
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({ email, source: "keepyours.xyz" }),
-      redirect: "follow",
+      redirect: "manual",
+      signal: AbortSignal.timeout(50_000),
     });
 
-    if (!res.ok) {
+    if (res.status < 200 || res.status >= 400) {
       console.error("waitlist endpoint returned", res.status);
       return Response.json({ error: "upstream failed" }, { status: 502 });
     }
