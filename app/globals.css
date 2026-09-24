@@ -1,0 +1,96 @@
+:root{
+  --green:#16B862;
+  --green-deep:#0B7A41;
+  --mint:#62E6A0;
+  --mint-soft:#D6F5E4;
+  --ink:#08150F;
+  --ink-2:#2C4A3B;
+  --muted:#5E7A6C;
+  --white:#FFFFFF;
+  --line:rgba(11,63,38,.10);
+  --glass:rgba(255,255,255,.62);
+  --shadow:0 1px 2px rgba(8,45,28,.05),0 24px 60px -24px rgba(8,45,28,.28);
+  --display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box}
+
+/* The gradient lives on html and is fixed to the viewport, so it can never
+   run out before the page does — that was the white band at 100% zoom. */
+html{
+  min-height:100%;
+  background-color:#EFF8F3;
+  background-image:
+    radial-gradient(90% 60% at 12% 8%, #EAFBF1 0%, rgba(234,251,241,0) 60%),
+    radial-gradient(70% 55% at 88% 12%, #D8F3E6 0%, rgba(216,243,230,0) 62%),
+    radial-gradient(85% 70% at 50% 112%, #9FE9C4 0%, rgba(159,233,196,0) 58%),
+    linear-gradient(180deg,#F7FBF9 0%,#EFF8F3 55%,#E3F5EC 100%);
+  background-attachment:fixed,fixed,fixed,fixed;
+  background-repeat:no-repeat;
+  background-size:cover;
+}
+body{
+  margin:0;
+  min-height:100dvh;
+  font-family:var(--body);
+  color:var(--ink);
+  background:transparent;
+  display:flex;flex-direction:column;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* film grain */
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.35;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='.28'/%3E%3C/svg%3E");
+}
+/* soft rings */
+.rings{position:fixed;inset:0;z-index:0;pointer-events:none;display:grid;place-items:center;overflow:hidden}
+.rings i{position:absolute;border:1px dashed rgba(11,63,38,.10);border-radius:50%}
+.rings i:nth-child(1){width:560px;height:560px}
+.rings i:nth-child(2){width:860px;height:860px}
+.rings i:nth-child(3){width:1180px;height:1180px;border-style:solid;border-color:rgba(11,63,38,.05)}
+
+.shell{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;padding:28px 20px 24px;max-width:1120px;margin-inline:auto;width:100%}
+
+header{display:flex;align-items:center;justify-content:center;gap:10px}
+.logo{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--ink)}
+.logo img{width:38px;height:38px;display:block}
+.logo span{font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:-.02em}
+
+main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding-block:42px 28px;gap:18px}
+
+.badge{display:inline-flex;align-items:center;gap:9px;padding:8px 16px;border-radius:999px;background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(14px);box-shadow:var(--shadow);font-size:11.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2)}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(22,184,98,.18)}
+
+h1{font-family:var(--display);font-weight:800;letter-spacing:-.035em;line-height:.98;margin:6px 0 0;font-size:clamp(42px,8.2vw,84px);text-wrap:balance}
+h1 em{font-style:normal;background:linear-gradient(100deg,var(--green) 10%,var(--green-deep) 90%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{margin:0;max-width:52ch;font-size:clamp(15px,1.9vw,18px);line-height:1.55;color:var(--ink-2)}
+
+/* form card */
+.card{margin-top:14px;width:100%;max-width:560px;background:var(--glass);border:1px solid rgba(255,255,255,.7);box-shadow:var(--shadow);backdrop-filter:blur(18px);border-radius:28px;padding:26px 26px 22px}
+.card h2{font-family:var(--display);font-size:19px;margin:0 0 6px;font-weight:600}
+.card p{margin:0 0 22px;font-size:14px;color:var(--muted)}
+form{display:flex;gap:8px;background:var(--white);border:1px solid var(--line);border-radius:999px;padding:6px;box-shadow:inset 0 1px 2px rgba(8,45,28,.04)}
+input[type=email]{flex:1;min-width:0;border:0;background:transparent;padding:12px 16px;font:inherit;font-size:15px;color:var(--ink);outline:none}
+input[type=email]::placeholder{color:#93AA9E}
+button{border:0;cursor:pointer;font:inherit;font-weight:600;font-size:15px;color:#03170C;background:linear-gradient(120deg,var(--green),var(--mint));padding:12px 22px;border-radius:999px;white-space:nowrap;box-shadow:0 8px 18px -8px rgba(22,184,98,.9);transition:transform .15s ease,box-shadow .15s ease}
+button:hover{transform:translateY(-1px);box-shadow:0 12px 22px -10px rgba(22,184,98,1)}
+button:disabled{opacity:.6;cursor:default;transform:none}
+:focus-visible{outline:2px solid var(--green);outline-offset:3px;border-radius:999px}
+.note{margin:34px 0 4px;font-size:12.5px;color:var(--muted)}
+.msg{margin-top:14px;font-size:14px}
+.msg.ok{color:var(--green-deep);font-weight:500}
+.msg.err{color:#B23A3A}
+
+/* three points */
+.points{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;width:100%;max-width:820px;margin-top:22px}
+@media (max-width:680px){.points{grid-template-columns:1fr}}
+.point{background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.65);backdrop-filter:blur(10px);border-radius:18px;padding:16px;text-align:left}
+.point b{display:block;font-family:var(--display);font-size:15px;margin-bottom:4px}
+.point span{font-size:13.5px;color:var(--muted);line-height:1.45}
+
+footer{position:relative;z-index:1;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px 18px;padding:18px 20px calc(18px + env(safe-area-inset-bottom,0px));font-size:13px;color:var(--muted)}
+footer a{color:var(--ink-2);text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+footer a:hover{color:var(--green-deep)}
+.sep{opacity:.4}

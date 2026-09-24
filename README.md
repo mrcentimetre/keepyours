@@ -53,16 +53,17 @@ git clone https://github.com/mrcentimetre/keepyours
 cd keepyours
 cp .env.example .env     # fill in your own keys
 
+# web app (waitlist now, the product later)
+npm install
+npm run dev              # http://localhost:3000
+
 # contracts
 cd contracts
 forge install
 forge test
-
-# app
-cd ../app
-pnpm install
-pnpm dev
 ```
+
+The waitlist form needs `WAITLIST_ENDPOINT` in `.env.local`; see [`docs/WAITLIST.md`](docs/WAITLIST.md).
 
 Deploy and verify steps: [`docs/RUNBOOK.md`](docs/RUNBOOK.md)
 
@@ -85,6 +86,7 @@ What existed before the window, and is **not** code: user research (Reddit, X an
 | [`docs/DEMO-SCRIPT.md`](docs/DEMO-SCRIPT.md) | The 5-minute demo video, shot by shot |
 | [`docs/SUBMISSION.md`](docs/SUBMISSION.md) | Answers and links for both submission forms |
 | [`docs/BRAND.md`](docs/BRAND.md) | Colours, fonts, logo, tone |
+| [`docs/WAITLIST.md`](docs/WAITLIST.md) | The waitlist page and where its emails go |
 
 ## Status
 
