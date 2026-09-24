@@ -1,0 +1,24 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# node
+node_modules/
+.next/
+out/
+dist/
+*.log
+.pnpm-store/
+
+# foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/lib/
+
+# os / editors
+.DS_Store
+**/.DS_Store
+.vscode/
+.idea/
