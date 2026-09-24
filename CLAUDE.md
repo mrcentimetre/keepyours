@@ -59,6 +59,7 @@ Amber always means waiting. Red always means blocked. Details: `docs/BRAND.md`.
 ## Working style
 
 - Small, clearly named commits. The Arbitrum form asks what was built during the window, and the commit history is the evidence.
+- **Conventional Commits**, e.g. `feat(web): …`, `fix(contracts): …`, `docs: …`, `chore: …`, `style(web): …`, `test(contracts): …`. No `Co-Authored-By` trailers; the commit history is Nimsara's.
 - Tests are the invariants in `docs/CONTRACTS.md`. Write them alongside the contract, not after.
 - Never commit `.env`. Keys are listed by name in `.env.example`.
 - Before mainnet: all tests green, Slither reviewed, deposit cap set, verified on Arbiscan.
