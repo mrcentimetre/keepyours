@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Keep Yours — get paid, keep yours</title>
 <meta name="description" content="A savings layer for people paid in crypto. Every USDC payment splits into spend and save. Savings sit behind a cooldown so they can't be traded away, and you can borrow against them before payday.">
-<link rel="icon" href="/logo.png">
-<link rel="apple-touch-icon" href="/logo.png">
+<link rel="icon" type="image/svg+xml" href="logo.svg">
+<link rel="icon" type="image/png" sizes="256x256" href="logo-256.png">
+<link rel="apple-touch-icon" href="logo-256.png">
 
 <!-- Open Graph -->
 <meta property="og:title" content="Keep Yours — get paid, keep yours">
@@ -14,6 +15,8 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://keepyours.xyz">
 <meta property="og:image" content="https://keepyours.xyz/og-banner.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="400">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:site" content="@keepyours">
 
@@ -65,8 +68,8 @@ body::before{
 .shell{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;padding:28px 20px 24px;max-width:1120px;margin-inline:auto;width:100%}
 
 header{display:flex;align-items:center;justify-content:center;gap:10px}
-.logo{display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--ink)}
-.logo img{width:36px;height:36px;display:block;border-radius:9px}
+.logo{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--ink)}
+.logo img{width:38px;height:38px;display:block}
 .logo span{font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:-.02em}
 
 main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding-block:42px 28px;gap:18px}
@@ -79,7 +82,7 @@ h1 em{font-style:normal;background:linear-gradient(100deg,var(--green) 10%,var(-
 .sub{margin:0;max-width:52ch;font-size:clamp(15px,1.9vw,18px);line-height:1.55;color:var(--ink-2)}
 
 /* form card */
-.card{margin-top:12px;width:100%;max-width:560px;background:var(--glass);border:1px solid rgba(255,255,255,.7);box-shadow:var(--shadow);backdrop-filter:blur(18px);border-radius:26px;padding:22px}
+.card{margin-top:14px;width:100%;max-width:560px;background:var(--glass);border:1px solid rgba(255,255,255,.7);box-shadow:var(--shadow);backdrop-filter:blur(18px);border-radius:28px;padding:26px 26px 22px}
 .card h2{font-family:var(--display);font-size:19px;margin:0 0 4px;font-weight:600}
 .card p{margin:0 0 16px;font-size:14px;color:var(--muted)}
 form{display:flex;gap:8px;background:var(--white);border:1px solid var(--line);border-radius:999px;padding:6px;box-shadow:inset 0 1px 2px rgba(8,45,28,.04)}
@@ -89,8 +92,8 @@ button{border:0;cursor:pointer;font:inherit;font-weight:600;font-size:15px;color
 button:hover{transform:translateY(-1px);box-shadow:0 12px 22px -10px rgba(22,184,98,1)}
 button:disabled{opacity:.6;cursor:default;transform:none}
 :focus-visible{outline:2px solid var(--green);outline-offset:3px;border-radius:999px}
-.note{margin-top:12px;font-size:12.5px;color:var(--muted)}
-.msg{margin-top:12px;font-size:14px;display:none}
+.note{margin:18px 0 2px;font-size:12.5px;color:var(--muted)}
+.msg{margin-top:14px;font-size:14px;display:none}
 .msg.ok{display:block;color:var(--green-deep);font-weight:500}
 .msg.err{display:block;color:#B23A3A}
 
@@ -114,7 +117,7 @@ footer a:hover{color:var(--green-deep)}
 <div class="shell">
   <header>
     <a class="logo" href="/">
-      <img src="/logo.png" alt="Keep Yours logo" width="36" height="36">
+      <img src="logo.svg" alt="" width="38" height="38">
       <span>Keep Yours</span>
     </a>
   </header>
