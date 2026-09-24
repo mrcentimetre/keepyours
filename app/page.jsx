@@ -71,31 +71,19 @@ export default function Home() {
         </main>
       </div>
 
-      <footer className="relative z-10 flex flex-wrap items-center justify-center gap-x-[18px] gap-y-2 px-5 pt-[18px] pb-[calc(18px+env(safe-area-inset-bottom,0px))] text-[13px] text-muted">
-        <span>© 2026 Keep Yours</span>
-        <span className="opacity-40">·</span>
+      <footer className="relative z-10 flex flex-col items-center gap-3.5 px-5 pt-6 pb-[calc(28px+env(safe-area-inset-bottom,0px))] text-[13px] text-muted">
         <a
-          href="https://x.com/keepyours"
+          href="https://x.com/keepyoursxyz"
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-ink-2 no-underline hover:text-green-deep"
+          className="inline-flex items-center gap-2 rounded-full border border-line bg-white/60 px-4 py-2 font-medium text-ink-2 no-underline backdrop-blur-[10px] transition hover:text-green-deep"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M18.9 2H22l-7.1 8.1L23.3 22h-6.6l-5.2-6.8L5.6 22H2.5l7.6-8.7L1.1 2h6.8l4.7 6.2L18.9 2Zm-1.1 18h1.7L7.3 3.8H5.5L17.8 20Z" />
           </svg>
-          @keepyours
+          Follow the build @keepyoursxyz
         </a>
-        <span className="opacity-40">·</span>
-        <a
-          href="https://github.com/mrcentimetre/keepyours"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-ink-2 no-underline hover:text-green-deep"
-        >
-          github
-        </a>
-        <span className="opacity-40">·</span>
-        <span>on Arbitrum</span>
+        <p className="m-0">© 2026 Keep Yours · Built on Arbitrum</p>
       </footer>
     </>
   );

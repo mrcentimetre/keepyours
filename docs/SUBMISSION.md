@@ -13,7 +13,7 @@ Deadlines in Sri Lanka time: **Arbitrum 4 Oct, 21:29** · **Colosseum 13 Oct, ~1
 | Live app | https://keepyours.xyz |
 | Repo | https://github.com/mrcentimetre/keepyours |
 | Demo video | TBD |
-| X | https://x.com/keepyours |
+| X | https://x.com/keepyoursxyz |
 | Proposal / research page | https://claude.ai/artifact/9HeCdWLtQBJFMuN1TMJGUt |
 
 ## Contract addresses

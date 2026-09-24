@@ -39,7 +39,7 @@ export const metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    site: "@keepyours",
+    site: "@keepyoursxyz",
   },
 };
 

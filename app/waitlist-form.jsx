@@ -32,7 +32,7 @@ export default function WaitlistForm() {
       setDone(true);
       setMsg({ text: "You're on the list. I'll email you once, when it opens.", ok: true });
     } catch {
-      setMsg({ text: "That didn't save. Try again, or DM @keepyours on X.", ok: false });
+      setMsg({ text: "That didn't save. Try again, or DM @keepyoursxyz on X.", ok: false });
       setBusy(false);
     }
   }

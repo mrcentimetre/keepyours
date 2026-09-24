@@ -7,7 +7,7 @@
 Never "Keep" on its own as the product name: "KEEP" is a live trademark for financial services in the US (Keep Financial Technologies) and the UK (Dorix Ltd), and Keep Network is an existing crypto token. People saying "use Keep" in conversation is fine and expected.
 
 - Domain: **keepyours.xyz**
-- X: **@keepyours**
+- X: **@keepyoursxyz**
 - Repo: github.com/mrcentimetre/keepyours
 
 ## Tagline
