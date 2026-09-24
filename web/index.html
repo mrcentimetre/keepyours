@@ -5,13 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Keep Yours — get paid, keep yours</title>
 <meta name="description" content="A savings layer for people paid in crypto. Every USDC payment splits into spend and save. Savings sit behind a cooldown so they can't be traded away, and you can borrow against them before payday.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%2316B862'/><path d='M50 18 78 34v32L50 82 22 66V34z' fill='%2362E6A0'/></svg>">
+<link rel="icon" href="/logo.png">
+<link rel="apple-touch-icon" href="/logo.png">
 
 <!-- Open Graph -->
 <meta property="og:title" content="Keep Yours — get paid, keep yours">
 <meta property="og:description" content="Savings for people paid in crypto. Split every payment, lock what you keep, borrow against it before payday. On Arbitrum.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://keepyours.xyz">
+<meta property="og:image" content="https://keepyours.xyz/og-banner.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@keepyours">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -61,13 +65,13 @@ body::before{
 .shell{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;padding:28px 20px 24px;max-width:1120px;margin-inline:auto;width:100%}
 
 header{display:flex;align-items:center;justify-content:center;gap:10px}
-.logo{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
-.logo svg{width:34px;height:34px;display:block}
+.logo{display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--ink)}
+.logo img{width:36px;height:36px;display:block;border-radius:9px}
 .logo span{font-family:var(--display);font-weight:800;font-size:19px;letter-spacing:-.02em}
 
 main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding-block:42px 28px;gap:18px}
 
-.badge{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(14px);box-shadow:var(--shadow);font-size:13px;color:var(--ink-2)}
+.badge{display:inline-flex;align-items:center;gap:9px;padding:8px 16px;border-radius:999px;background:var(--glass);border:1px solid var(--line);backdrop-filter:blur(14px);box-shadow:var(--shadow);font-size:11.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2)}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(22,184,98,.18)}
 
 h1{font-family:var(--display);font-weight:800;letter-spacing:-.035em;line-height:.98;margin:6px 0 0;font-size:clamp(42px,8.2vw,84px);text-wrap:balance}
@@ -110,13 +114,13 @@ footer a:hover{color:var(--green-deep)}
 <div class="shell">
   <header>
     <a class="logo" href="/">
-      <svg viewBox="0 0 100 100" aria-hidden="true"><path d="M50 8 86 29v42L50 92 14 71V29z" fill="#16B862"/><path d="M42 68V42a4 4 0 0 1 4-4h22" fill="none" stroke="#EAFBF1" stroke-width="9" stroke-linecap="round"/><path d="M56 30l14 8-14 8" fill="#EAFBF1"/></svg>
+      <img src="/logo.png" alt="Keep Yours logo" width="36" height="36">
       <span>Keep Yours</span>
     </a>
   </header>
 
   <main>
-    <div class="badge"><span class="dot"></span> building in public · live soon on Arbitrum</div>
+    <div class="badge"><span class="dot"></span> Launching soon on Arbitrum One</div>
 
     <h1>Get paid.<br><em>Keep yours.</em></h1>
 
@@ -132,7 +136,7 @@ footer a:hover{color:var(--green-deep)}
       </form>
 
       <div class="msg" id="msg" role="status" aria-live="polite"></div>
-      <p class="note">Built in Sri Lanka 🇱🇰 for people paid in crypto.</p>
+      <p class="note">Non-custodial. Your keys, your savings.</p>
     </div>
 
     <div class="points">
