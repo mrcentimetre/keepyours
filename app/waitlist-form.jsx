@@ -40,7 +40,12 @@ export default function WaitlistForm() {
   return (
     <>
       {!done && (
-        <form onSubmit={onSubmit} noValidate>
+        <form
+          onSubmit={onSubmit}
+          noValidate
+          className="flex gap-2 rounded-full border border-line bg-white p-1.5 shadow-[inset_0_1px_2px_rgba(8,45,28,0.04)] max-[480px]:flex-col max-[480px]:rounded-[22px]"
+        >
+          {/* 16px minimum: iOS Safari zooms the page on focus for any smaller input */}
           <input
             type="email"
             name="email"
@@ -50,20 +55,33 @@ export default function WaitlistForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            className="min-w-0 flex-1 border-0 bg-transparent px-4 py-3 text-base text-ink outline-none placeholder:text-[#93aa9e] max-[480px]:py-3.5 max-[480px]:text-center"
           />
-          <button type="submit" disabled={busy}>
+          <button
+            type="submit"
+            disabled={busy}
+            className="cursor-pointer rounded-full border-0 bg-linear-[120deg] from-green to-mint px-[22px] py-3 text-[15px] font-semibold whitespace-nowrap text-[#03170c] shadow-[0_8px_18px_-8px_rgba(22,184,98,0.9)] transition hover:-translate-y-px hover:shadow-[0_12px_22px_-10px_rgb(22,184,98)] disabled:translate-y-0 disabled:cursor-default disabled:opacity-60 max-[480px]:py-3.5"
+          >
             {busy ? "Saving…" : "Get early access"}
           </button>
         </form>
       )}
 
       {msg && (
-        <div className={"msg " + (msg.ok ? "ok" : "err")} role="status" aria-live="polite">
+        <div
+          role="status"
+          aria-live="polite"
+          className={
+            "mt-3.5 text-sm " + (msg.ok ? "font-medium text-green-deep" : "text-[#b23a3a]")
+          }
+        >
           {msg.text}
         </div>
       )}
 
-      <p className="note">Non-custodial. Your keys, your savings.</p>
+      <p className="m-0 mt-[22px] mb-0.5 text-[12.5px] leading-normal text-muted">
+        Non-custodial. Your keys, your savings.
+      </p>
     </>
   );
 }

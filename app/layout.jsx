@@ -1,4 +1,19 @@
+import { Bricolage_Grotesque, IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
+
+const bricolage = Bricolage_Grotesque({
+  subsets: ["latin"],
+  weight: ["600", "800"],
+  variable: "--font-bricolage",
+  display: "swap",
+});
+
+const plex = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-plex",
+  display: "swap",
+});
 
 const SITE = "https://keepyours.xyz";
 
@@ -35,16 +50,10 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
-        />
-      </head>
-      <body>{children}</body>
+    <html lang="en" className={`${bricolage.variable} ${plex.variable}`}>
+      <body className="relative m-0 flex min-h-dvh flex-col bg-transparent font-sans text-ink antialiased">
+        {children}
+      </body>
     </html>
   );
 }

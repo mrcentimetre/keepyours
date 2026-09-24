@@ -7,7 +7,7 @@ The waitlist is the home page of the Next.js app at the repo root.
 | `app/page.jsx` | The page itself (server component) |
 | `app/waitlist-form.jsx` | The email form (client component) |
 | `app/api/waitlist/route.js` | Server route that forwards the email to the sheet |
-| `app/globals.css` | All the styling |
+| `app/globals.css` | Tailwind import, brand tokens (`@theme`), page background |
 | `public/` | `logo.svg`, `logo-256.png`, `og-banner.png` |
 
 The browser never talks to Google directly. It posts to `/api/waitlist`, which

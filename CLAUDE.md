@@ -34,7 +34,7 @@ Requirements for both: `docs/SUBMISSION.md`.
 - Contracts: Solidity + Foundry, OpenZeppelin, not upgradeable
 - Chain: Arbitrum Sepolia for testing, Arbitrum One for the demo
 - Wallet: ZeroDev passkey smart account + paymaster (also counts as sponsor tech on the Arbitrum form)
-- App: Next.js + wagmi/viem, mobile-first PWA
+- App: Next.js (App Router) + Tailwind CSS v4 + wagmi/viem, mobile-first PWA
 - Alerts: contract events → Telegram bot
 - Hosting: Vercel, domain keepyours.xyz
 
