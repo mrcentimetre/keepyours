@@ -22,7 +22,7 @@ export default function Home() {
         <header className="flex items-center justify-center gap-2.5">
           <a href="/" className="flex items-center gap-3 text-ink no-underline">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.svg" alt="" width={38} height={38} className="block size-[38px]" />
+            <img src="/logo-128.png" alt="" width={38} height={38} className="block size-[38px]" />
             <span className="font-display text-[19px] font-extrabold tracking-[-0.02em]">
               Keep Yours
             </span>

@@ -24,10 +24,9 @@ export const metadata = {
     "A savings layer for people paid in crypto. Every USDC payment splits into spend and save. Savings sit behind a cooldown so they can't be traded away, and you can borrow against them before payday.",
   icons: {
     icon: [
-      { url: "/logo.svg", type: "image/svg+xml" },
       { url: "/logo-256.png", sizes: "256x256", type: "image/png" },
     ],
-    apple: "/logo-256.png",
+    apple: "/apple-icon.png",
   },
   openGraph: {
     title: "Keep Yours — get paid, keep yours",
