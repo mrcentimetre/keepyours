@@ -13,9 +13,9 @@ Write this before building, because it decides which screens must actually work.
 | 3 | 0:45–1:15 | App: setup screen, split slider, cooldown | "Keep Yours takes one setting. 60% to spend, 40% to keep. Withdrawals from the kept part wait 72 hours." |
 | 4 | 1:15–2:00 | Second wallet sends $100 USDC → home screen updates | "A client pays. The contract splits it live on Arbitrum: $60 to my spending wallet, $40 into the vault." Show the transaction on Arbiscan. |
 | 5 | 2:00–2:40 | Withdraw screen at 2am, countdown, cancel | "Here's the part that matters. I try to take it out at 2am. A 72-hour timer starts, my phone buzzes, and cancelling is one tap." |
-| 6 | 2:40–3:20 | Advance screen: $30 advance, fee, payout | "But real needs exist. Rent is due before the client pays. I take an advance against my **own** savings: $30 now, $0.45 fee. No lender, no credit check, nobody to run from." |
+| 6 | 2:40–3:20 | Advance screen: $30 advance, fee, payout | "But real needs exist. Rent is due before the client pays. I take an advance against my **own** savings: $30 now, free for the first 30 days. It comes from a small advance pool, and my savings stay locked as the security. No credit check, nobody to chase." |
 | 7 | 3:20–3:50 | Another payment lands → repayment first, then split | "The next client payment repays it automatically, before the split. The loop closes itself." |
-| 8 | 3:50–4:20 | Architecture slide | "One contract on Arbitrum. Passkey wallet, sponsored gas, so no seed phrase and no ETH. Everything is enforced by code, not by us: we can't touch anyone's money." |
+| 8 | 3:50–4:20 | Architecture slide | "Every user gets their own vault contract on Arbitrum. Passkey wallet, sponsored gas, so no seed phrase and no ETH. Everything is enforced by code, not by us: we can't touch anyone's money." |
 | 9 | 4:20–4:50 | Numbers + roadmap slide | "X people tested it this week. Y said they'd use it with real money. Yield on savings and cross-chain payments are next." |
 | 10 | 4:50–5:00 | Logo, URL, handle | "Keep Yours. keepyours.xyz. Get paid, keep yours." |
 

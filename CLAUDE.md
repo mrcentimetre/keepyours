@@ -8,7 +8,7 @@ A savings layer on Arbitrum for people paid in stablecoins. Every USDC payment s
 
 **Tagline:** Get paid. Keep yours.
 
-Full detail: `docs/SPEC.md`. Contract design and the 8 invariants: `docs/CONTRACTS.md`.
+Full detail: `docs/SPEC.md`. Contract design and the invariants: `docs/CONTRACTS.md`.
 
 ## Deadlines (Sri Lanka time, UTC+5:30)
 
@@ -44,9 +44,17 @@ Why each: `docs/ARCHITECTURE.md`.
 
 **MVP for 4 Oct (never cut):** auto-split, cooldown vault, advance against savings.
 
-**Cut in this order if short on time:** guardian → deposit forwarder and keeper (fall back to "Deposit from wallet") → verified send.
+**Cut in this order if short on time:** guardian → keeper (the app calls `process()` itself) → verified send. If the advance pool is not solid by 28 Sep, ship the advance on testnet only.
 
-**After the hackathon:** Aave yield, cross-chain deposits via Daimo, guardian, more markets.
+**After the hackathon:** Aave yield, cross-chain deposits via Daimo, guardian, more markets, score-based advance limits.
+
+## Design decisions (26 Sep 2026, after mentor feedback)
+
+- **One vault contract per user**, an EIP-1167 clone made by a factory. No shared pool of savings.
+- **Advances come from a separate advance pool** (the builder's own small capital), never from other users' savings.
+- **Advance fee:** free for 30 days, then 1.5%, then 3%. After day 90 anyone can settle from the borrower's savings. No penalty in the MVP.
+- **Yield later, from a standard protocol (Aave v3)**, never a custodial platform. Safety over rate.
+- **Security is priority one.** User agreement before real users. Mainnet stays capped.
 
 ## Brand
 

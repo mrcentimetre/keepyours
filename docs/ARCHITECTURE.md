@@ -3,14 +3,17 @@
 ## The whole system in one path
 
 ```
-client  --USDC-->  forwarder (per user)  --sweep()-->  KeepVault
-                                                          |
-                                     +--------------------+--------------------+
-                                     |                    |                    |
-                              repay owed            spend share            saved
-                                                     -> spendTo        (+ Aave later)
-                                                                             |
-                                                       requestWithdraw -> cooldown -> safePlace
+client --USDC--> user's own vault (its own address, its own contract)
+                        |
+                        | process()   (anyone: the app, or a keeper)
+        +---------------+----------------+
+        |               |                |
+  repay advance    spend share        saved (+ Aave later)
+  -> AdvancePool   -> spendTo              |
+                                           requestWithdraw -> cooldown -> safePlace
+
+AdvancePool --advance--> spendTo      (separate money, never user savings)
+after day 90: anyone can settle, and what is owed is taken from that vault's saved
 ```
 
 ## Pieces
@@ -18,24 +21,51 @@ client  --USDC-->  forwarder (per user)  --sweep()-->  KeepVault
 | Layer | Choice | Why |
 |---|---|---|
 | Chain | **Arbitrum One** (Sepolia for testing) | Native USDC, cents per transaction, RIP-7212 precompile makes passkey wallets cheap, sponsor of the buildathon |
-| Contract | `KeepVault.sol`, OpenZeppelin `SafeERC20` + `ReentrancyGuard` | Small surface, not upgradeable, no admin withdraw |
-| Deposit address | Minimal-proxy forwarder per user, deployed with CREATE2 | The payer just sends USDC to an address; no dApp needed on their side |
-| Sweep | `sweep()` callable by anyone; app calls it, plus a Gelato/Defender job as backup | A plain ERC-20 transfer can't run code on arrival |
+| Vault | `KeepVault`, one per user, an EIP-1167 clone of one fixed implementation. OpenZeppelin `SafeERC20` + `ReentrancyGuard` | Each person's savings sit at their own address. No shared pool, no admin withdraw, no upgrade path |
+| Factory | `KeepVaultFactory`, CREATE2 with the owner as salt | The vault address is known before it exists, so the get-paid link works from day one |
+| Advance money | `AdvancePool`, separate from every vault | Advances never spend other users' savings |
+| Split trigger | `process()`, callable by anyone. The app calls it, plus a small keeper as backup | A plain ERC-20 transfer can't run code on arrival |
 | Wallet | **ZeroDev** Kernel smart account with a passkey signer | No seed phrase. Built by Offchain Labs. Counts as sponsor tech on the submission form |
-| Gas | ZeroDev paymaster sponsors user operations | Users never need ETH |
-| Frontend | Next.js + wagmi/viem, mobile-first **PWA** | One codebase, installable, works in a browser tab for the demo |
-| Reads | viem + event logs; small indexer (Ponder or a cron) if needed | No database of balances; the contract is the source of truth |
+| Gas | ZeroDev paymaster sponsors user operations | Users never need ETH. **You pay for it** (see costs below) |
+| Frontend | Next.js + Tailwind CSS v4 + wagmi/viem, mobile-first **PWA** | One codebase, installable, works in a browser tab for the demo |
+| Reads | viem + event logs; small indexer (Ponder or a cron) if needed | No database of balances; the contracts are the source of truth |
 | Alerts | Contract events → Telegram bot; web push later | Telegram is where these users already are |
 | Hosting | Vercel | Fast deploys, preview URLs, custom domain |
 | Tests | Foundry: unit, fuzz and invariant tests; Slither | The invariants in CONTRACTS.md are the spec |
 
-## Why a forwarder plus a sweep
+## Why one vault per user
 
-USDC is a plain ERC-20. Sending it to a contract does **not** call the contract, so the split can't happen inside the transfer. The forwarder is a cheap per-user address that holds the funds until someone calls `sweep()`, which moves them into `KeepVault` and triggers the split.
+- **Bugs can't leak between people.** A vault only ever holds one person's money, so accounting mistakes can't touch someone else's.
+- **Non-custodial you can check.** "Your savings sit at your own address that only you can withdraw from" is visible on Arbiscan. A shared contract with a ledger is one pool that a single bug could drain, and it looks like custody.
+- **Simpler code and tests.** No per-user tables. The per-vault invariants are easy to state.
+- **It replaces the separate deposit forwarder.** The vault address is the deposit address.
 
-- Anyone can call `sweep()`, including the user from the app, so a dead keeper never traps funds.
-- Funds in a forwarder can only go to `KeepVault`.
-- **Cut plan:** if this isn't solid by 29 Sep, drop it and use "Deposit from wallet" (approve + `deposit`) in the app.
+Costs of the choice:
+
+- A bug in the shared implementation is a bug in every vault. There is no upgrade path, so a fix means a new factory and a migration.
+- More contracts to write and test: vault, factory and pool.
+- The pool must only lend to vaults the factory really made, or someone could invent a fake vault and borrow. It checks `factory.isVault`.
+- On default the pool needs a narrow path to take what is owed from a vault. `releaseToPool` is callable only by the pool, only after day 90, and only up to what is owed.
+- Money arrives first and is split when `process()` is called. A keeper makes it near-instant, but it is not literally atomic.
+- Clones initialise through a function, not a constructor. `initialize` must run once, in the same transaction as creation, and the implementation itself must be locked.
+
+**Clones or full copies?** Clones cost roughly 150,000 to 250,000 gas to create (my estimate, to be measured with Foundry), against perhaps 1 to 2 million for a full copy. We chose clones and describe them honestly: immutable clones of fixed code, no upgrade path.
+
+## Costs to plan for
+
+*Checked on ZeroDev's pricing page on 26 Sep 2026. Verify before paying.*
+
+| Item | Testnet | Mainnet |
+|---|---|---|
+| ZeroDev plan | **Sandbox: free**, 10,000 credits, testnets only | **Launch: $69/month**, 100,000 credits, mainnet gas sponsorship |
+| Gas sponsorship | included, 8% premium on gas | same |
+| Credits | 10 per wallet signature, 20 per bundled user operation | same |
+| Making a user's vault | test ETH | a few cents (estimate), sponsored |
+
+- Nothing is sponsored until a **gas policy** is set in the ZeroDev dashboard.
+- The real cost is the $69 a month for mainnet, not the gas.
+- ZeroDev also supports paying gas in ERC-20 tokens. Not yet checked whether the free plan allows it.
+- The advance pool is a separate cost: the builder's own capital.
 
 ## Passkeys, practically
 
@@ -50,8 +80,9 @@ USDC is a plain ERC-20. Sending it to a contract does **not** call the contract,
 | Chain | Arbitrum Sepolia | Arbitrum One |
 | USDC | Circle faucet test USDC | Native USDC |
 | Who | Club members testing | Me, plus capped pilot users |
-| Cap | none | $200 per vault |
+| Cap | none | $200 of `saved` per vault |
+| Advance pool | test USDC | a few tens of dollars, the builder's own |
 
 ## What is deliberately not here
 
-No backend database of user funds, no custody, no admin keys, no off-chain matching engine. If the frontend disappears, a user can still call `requestWithdraw` and `executeWithdraw` straight from Arbiscan.
+No backend database of user funds, no custody, no admin keys, no shared pool of savings, no off-chain matching engine. If the frontend disappears, a user can still call `requestWithdraw` and `executeWithdraw` on their own vault straight from Arbiscan.

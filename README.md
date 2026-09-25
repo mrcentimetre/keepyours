@@ -26,9 +26,9 @@ Evidence behind each of these (Reddit threads, X posts, interviews with freelanc
 |---|---|
 | **Get paid link** | One link per request. The payer can't pick the wrong network. |
 | **Auto-split** | Every incoming payment splits by your rule, e.g. 60% spend / 40% keep. |
-| **Cooldown vault** | Withdrawals wait 24h–7d, can be cancelled, and only go to your pre-set safe address. |
+| **Cooldown vault** | Your own vault contract. Withdrawals wait 72h, 7 days, 14 days or a month (you choose), can be cancelled, and only go to your pre-set safe address. |
 | **Guardian** | An optional trusted friend can approve an emergency withdrawal early. They can never take funds. |
-| **Advance** | Take up to 50% of your savings instantly for a flat fee, repaid automatically from your next payments. |
+| **Advance** | Borrow up to 50% against your own locked savings. Free for 30 days, then 1.5% and 3%. It comes from a separate advance pool, never from other people's savings, and repays itself from your next payments. |
 | **Verified send** | Saved exchange addresses with network and memo checks, and a $1 test first. |
 
 Full scope, including what is MVP and what is stretch: [`docs/SPEC.md`](docs/SPEC.md)
@@ -41,8 +41,8 @@ Only a smart contract can hold you to a rule about money you still control yours
 
 | Network | Contract | Address |
 |---|---|---|
-| Arbitrum Sepolia | KeepVault | `TBD` |
-| Arbitrum One | KeepVault | `TBD` |
+| Arbitrum Sepolia | KeepVaultFactory, KeepVault (implementation), AdvancePool | `TBD` |
+| Arbitrum One | KeepVaultFactory, KeepVault (implementation), AdvancePool | `TBD` |
 
 Design and invariants: [`docs/CONTRACTS.md`](docs/CONTRACTS.md)
 

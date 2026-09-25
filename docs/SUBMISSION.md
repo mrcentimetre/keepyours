@@ -21,8 +21,8 @@ Deadlines in Sri Lanka time: **Arbitrum 4 Oct, 21:29** · **Colosseum 13 Oct, ~1
 Format the Arbitrum form wants, one per line:
 
 ```
-Arbitrum One: 0x... — KeepVault
-Arbitrum Sepolia: 0x... — KeepVault (testnet)
+Arbitrum One: 0x... — KeepVaultFactory, KeepVault (implementation), AdvancePool
+Arbitrum Sepolia: 0x... — KeepVaultFactory, KeepVault (implementation), AdvancePool (testnet)
 ```
 
 - Factory / pool contracts: `Arbitrum One: 0x... — Forwarder factory` (or N/A)
@@ -56,9 +56,9 @@ Arbitrum Sepolia: 0x... — KeepVault (testnet)
 1. **The problem** — three pains, with the quotes and numbers from the research.
 2. **The solution** — the six features, in the order a user meets them.
 3. **Why onchain** — a contract is the only thing that can hold you to a rule about money you still control.
-4. **How it works** — contract, forwarder, passkey wallet, sponsored gas.
+4. **How it works** — a vault contract per user, a separate advance pool, passkey wallet, sponsored gas.
 5. **Traction** — exactly what happened, no invention.
-6. **Business model** — 15% of yield, 1–2% advance fee, savings payroll for teams.
+6. **Business model** — 15% of yield, advance fee after 30 free days (1.5%, then 3%), savings payroll for teams.
 7. **What's next** — yield, cross-chain deposits via Daimo, guardian, more markets.
 
 **Judging criteria to answer explicitly:** functionality, potential impact, novelty, UX, open-source, business plan.
