@@ -1,4 +1,17 @@
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const HANDLE = /^[A-Za-z0-9_]{1,15}$/;
+
+// Returns { email, handle } or { error } for a signup body.
+function parseSignup(body) {
+  const email = typeof body?.email === "string" ? body.email.trim() : "";
+  if (!EMAIL.test(email) || email.length > 254) return { error: "invalid email" };
+
+  const handle = typeof body?.handle === "string" ? body.handle.trim().replace(/^@+/, "") : "";
+  if (!HANDLE.test(handle)) return { error: "invalid handle" };
+  if (body?.consent !== true) return { error: "consent required" };
+
+  return { email, handle };
+}
 
 export async function POST(request) {
   const endpoint = process.env.WAITLIST_ENDPOINT;
@@ -14,10 +27,8 @@ export async function POST(request) {
     return Response.json({ error: "bad request" }, { status: 400 });
   }
 
-  const email = typeof body?.email === "string" ? body.email.trim() : "";
-  if (!EMAIL.test(email) || email.length > 254) {
-    return Response.json({ error: "invalid email" }, { status: 400 });
-  }
+  const { email, handle, error } = parseSignup(body);
+  if (error) return Response.json({ error }, { status: 400 });
 
   try {
     // Apps Script runs doPost (and appends the row) first, then answers with a
@@ -28,7 +39,7 @@ export async function POST(request) {
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ email, source: "keepyours.xyz" }),
+      body: JSON.stringify({ email, handle, consent: true, source: "keepyours.xyz" }),
       redirect: "manual",
       signal: AbortSignal.timeout(50_000),
     });

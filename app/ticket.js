@@ -1,0 +1,291 @@
+// The on-screen pass and the downloaded PNG use the same painters, so they
+// can't drift apart.
+export const TICKET_W = 600;
+export const TICKET_H = 272;
+
+const CORNER = 22;
+const SPLIT = 216;
+const NOTCH = 16;
+const CODE_W = 142;
+const CODE_H = 172;
+const CODE_X = (SPLIT - CODE_W) / 2;
+const CODE_Y = (TICKET_H - CODE_H) / 2;
+
+// Right-side insets (%) that bound the barcode print sweep to the stub.
+export const STUB_CLIP = {
+  from: `${(1 - (CODE_X - 2) / TICKET_W) * 100}%`,
+  to: `${(1 - SPLIT / TICKET_W) * 100}%`,
+};
+
+const BODY_X = SPLIT + 30;
+const BODY_MAX = TICKET_W - BODY_X - 36;
+
+const C = {
+  night: "#060E0A",
+  green: "#16B862",
+  mint: "#62E6A0",
+};
+
+const EXPORT_W = 1200;
+const EXPORT_H = 675;
+const EXPORT_SCALE = 2;
+
+function hash(text) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
+
+function barcode(seed) {
+  let s = hash(seed) || 1;
+  const next = () => {
+    s ^= s << 13;
+    s ^= s >>> 17;
+    s ^= s << 5;
+    return (s >>> 0) / 4294967296;
+  };
+  return Array.from({ length: 45 }, () => 1 + Math.floor(next() * 3));
+}
+
+// Scooped corners plus a notch top and bottom at the tear line.
+function ticketPath(ctx) {
+  const W = TICKET_W;
+  const H = TICKET_H;
+  ctx.beginPath();
+  ctx.moveTo(CORNER, 0);
+  ctx.arc(SPLIT, 0, NOTCH, Math.PI, 0, true);
+  ctx.lineTo(W - CORNER, 0);
+  ctx.arc(W, 0, CORNER, Math.PI, Math.PI / 2, true);
+  ctx.lineTo(W, H - CORNER);
+  ctx.arc(W, H, CORNER, (3 * Math.PI) / 2, Math.PI, true);
+  ctx.arc(SPLIT, H, NOTCH, 0, Math.PI, true);
+  ctx.lineTo(CORNER, H);
+  ctx.arc(0, H, CORNER, 0, -Math.PI / 2, true);
+  ctx.lineTo(0, CORNER);
+  ctx.arc(0, 0, CORNER, Math.PI / 2, 0, true);
+  ctx.closePath();
+}
+
+function tracked(ctx, text, x, y, em) {
+  if ("letterSpacing" in ctx) {
+    ctx.letterSpacing = `${em}px`;
+    ctx.fillText(text, x, y);
+    ctx.letterSpacing = "0px";
+  } else {
+    ctx.fillText(text.split("").join(" "), x, y);
+  }
+}
+
+function ellipsize(ctx, text, max) {
+  if (ctx.measureText(text).width <= max) return text;
+  let cut = text;
+  while (cut.length > 1 && ctx.measureText(`${cut}…`).width > max) cut = cut.slice(0, -1);
+  return `${cut}…`;
+}
+
+// Shrink first, then split at the @, and only truncate as a last resort.
+function fitEmail(ctx, email, font) {
+  for (let size = 26; size >= 15; size--) {
+    ctx.font = `500 ${size}px ${font}`;
+    if (ctx.measureText(email).width <= BODY_MAX) return { size, lines: [email] };
+  }
+  const at = email.lastIndexOf("@");
+  const lines = at > 0 ? [email.slice(0, at), email.slice(at)] : [email];
+  for (let size = 22; size >= 15; size--) {
+    ctx.font = `500 ${size}px ${font}`;
+    if (lines.every((l) => ctx.measureText(l).width <= BODY_MAX)) return { size, lines };
+  }
+  ctx.font = `500 15px ${font}`;
+  return { size: 15, lines: lines.map((l) => ellipsize(ctx, l, BODY_MAX)) };
+}
+
+// Where each row of the body column sits, centred as one block.
+function column(ctx, pass) {
+  const fit = fitEmail(ctx, pass.email, pass.fonts.sans);
+  const handleSize = Math.max(13, Math.round(fit.size * 0.72));
+  const lockup = 28;
+  const caption = 11;
+  const email = fit.lines.length * fit.size * 1.2;
+  const block = lockup + 18 + caption + 10 + email + 8 + handleSize * 1.3;
+  const top = (TICKET_H - block) / 2;
+  return {
+    fit,
+    handleSize,
+    lockupTop: top,
+    captionTop: top + lockup + 18,
+    emailTop: top + lockup + 18 + caption + 10,
+    handleTop: top + lockup + 18 + caption + 10 + email + 8,
+  };
+}
+
+function paintShape(ctx) {
+  ticketPath(ctx);
+  const fill = ctx.createLinearGradient(0, TICKET_H, TICKET_W, 0);
+  fill.addColorStop(0, C.mint);
+  fill.addColorStop(1, C.green);
+  ctx.fillStyle = fill;
+  ctx.fill();
+
+  ctx.save();
+  ctx.setLineDash([9, 7]);
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "rgba(6, 14, 10, 0.32)";
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(SPLIT, NOTCH + 10);
+  ctx.lineTo(SPLIT, TICKET_H - NOTCH - 10);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function paintCode(ctx, { handle }) {
+  const widths = barcode(handle.toLowerCase());
+  const units = widths.reduce((a, b) => a + b, 0);
+  const unit = CODE_W / units;
+  ctx.fillStyle = C.night;
+  let x = CODE_X;
+  widths.forEach((w, i) => {
+    if (i % 2 === 0) ctx.fillRect(x, CODE_Y, w * unit, CODE_H);
+    x += w * unit;
+  });
+}
+
+function paintBrand(ctx, pass) {
+  const { fonts, logo } = pass;
+  const { lockupTop, captionTop } = column(ctx, pass);
+  if (logo) ctx.drawImage(logo, BODY_X, lockupTop, 28, 28);
+  ctx.fillStyle = C.night;
+  ctx.font = `800 22px ${fonts.display}`;
+  ctx.textBaseline = "middle";
+  ctx.fillText("Keep Yours", BODY_X + (logo ? 36 : 0), lockupTop + 15);
+
+  ctx.textBaseline = "top";
+  ctx.globalAlpha = 0.7;
+  ctx.font = `500 11px ${fonts.mono}`;
+  tracked(ctx, "WAITLIST PASS", BODY_X, captionTop, 2.2);
+}
+
+function paintEmail(ctx, pass) {
+  const { fit, emailTop } = column(ctx, pass);
+  ctx.fillStyle = C.night;
+  ctx.textBaseline = "top";
+  ctx.font = `500 ${fit.size}px ${pass.fonts.sans}`;
+  fit.lines.forEach((line, i) => ctx.fillText(line, BODY_X, emailTop + i * fit.size * 1.2));
+}
+
+function paintHandle(ctx, pass) {
+  const { handleSize, handleTop } = column(ctx, pass);
+  ctx.fillStyle = C.night;
+  ctx.globalAlpha = 0.8;
+  ctx.textBaseline = "top";
+  ctx.font = `400 ${handleSize}px ${pass.fonts.sans}`;
+  ctx.fillText(ellipsize(ctx, `@${pass.handle}`, BODY_MAX), BODY_X, handleTop);
+}
+
+// Separate layers so the screen can animate each part; the PNG stacks them all.
+export const LAYERS = [
+  ["shape", paintShape],
+  ["code", paintCode],
+  ["brand", paintBrand],
+  ["email", paintEmail],
+  ["handle", paintHandle],
+];
+
+function paintTicket(ctx, pass) {
+  for (const [, paint] of LAYERS) {
+    ctx.save();
+    ctx.textAlign = "left";
+    paint(ctx, pass);
+    ctx.restore();
+  }
+}
+
+export function drawLayer(canvas, name, pass, width) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  const scale = width / TICKET_W;
+  canvas.width = Math.round(TICKET_W * scale * dpr);
+  canvas.height = Math.round(TICKET_H * scale * dpr);
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+  ctx.textAlign = "left";
+  LAYERS.find(([n]) => n === name)[1](ctx, pass);
+}
+
+export function ticketBlob(pass) {
+  const canvas = document.createElement("canvas");
+  canvas.width = EXPORT_W * EXPORT_SCALE;
+  canvas.height = EXPORT_H * EXPORT_SCALE;
+  const ctx = canvas.getContext("2d");
+  ctx.scale(EXPORT_SCALE, EXPORT_SCALE);
+
+  const bg = ctx.createLinearGradient(0, 0, 0, EXPORT_H);
+  bg.addColorStop(0, "#f7fbf9");
+  bg.addColorStop(1, "#e3f5ec");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, EXPORT_W, EXPORT_H);
+
+  const s = 1.55;
+  ctx.save();
+  ctx.translate(EXPORT_W / 2, EXPORT_H / 2 - 20);
+  ctx.rotate((-2.5 * Math.PI) / 180);
+  ctx.scale(s, s);
+  ctx.translate(-TICKET_W / 2, -TICKET_H / 2);
+  ctx.shadowColor = "rgba(8, 45, 28, 0.22)";
+  ctx.shadowBlur = 36;
+  ctx.shadowOffsetY = 14;
+  ticketPath(ctx);
+  ctx.fillStyle = C.green;
+  ctx.fill();
+  ctx.shadowColor = "transparent";
+  paintTicket(ctx, pass);
+  ctx.restore();
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#0b7a41";
+  ctx.font = `600 22px ${pass.fonts.display}`;
+  ctx.fillText("Get paid. Keep yours.  ·  keepyours.xyz", EXPORT_W / 2, EXPORT_H - 40);
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("encode failed"))), "image/png");
+  });
+}
+
+// The logo is green, so it is recoloured to Night to show on the green ticket.
+function tint(img, color) {
+  const c = document.createElement("canvas");
+  c.width = img.naturalWidth;
+  c.height = img.naturalHeight;
+  const ctx = c.getContext("2d");
+  ctx.drawImage(img, 0, 0);
+  ctx.globalCompositeOperation = "source-in";
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, c.width, c.height);
+  return c;
+}
+
+export async function loadPassAssets() {
+  const root = getComputedStyle(document.documentElement);
+  const read = (v, fallback) => root.getPropertyValue(v).trim() || fallback;
+  const fonts = {
+    display: read("--font-bricolage", "system-ui, sans-serif"),
+    sans: read("--font-plex", "system-ui, sans-serif"),
+    mono: read("--font-plex-mono", "ui-monospace, monospace"),
+  };
+
+  const logo = new Image();
+  logo.src = "/logo-128.png";
+
+  await Promise.allSettled([
+    document.fonts?.load(`800 22px ${fonts.display}`),
+    document.fonts?.load(`600 22px ${fonts.display}`),
+    document.fonts?.load(`500 20px ${fonts.sans}`),
+    document.fonts?.load(`400 20px ${fonts.sans}`),
+    document.fonts?.load(`500 11px ${fonts.mono}`),
+    logo.decode(),
+  ]);
+
+  return { fonts, logo: logo.complete && logo.naturalWidth ? tint(logo, C.night) : null };
+}

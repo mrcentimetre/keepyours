@@ -3,22 +3,54 @@
 import { useState } from "react";
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const HANDLE = /^[A-Za-z0-9_]{1,15}$/;
 
-export default function WaitlistForm() {
+const cleanHandle = (value) => value.trim().replace(/^@+/, "");
+
+// A row that opens from zero height when `open` turns true.
+function Reveal({ open, children }) {
+  return (
+    <div
+      className={`grid transition-[grid-template-rows,opacity] duration-300 ease-out ${
+        open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+      }`}
+      inert={!open}
+    >
+      {/* padding keeps the focus ring from being clipped */}
+      <div className="-mx-1.5 -mb-1.5 min-h-0 overflow-hidden px-1.5 pb-1.5">{children}</div>
+    </div>
+  );
+}
+
+export default function WaitlistForm({ onJoined }) {
   const [email, setEmail] = useState("");
+  const [handle, setHandle] = useState("");
+  const [consent, setConsent] = useState(false);
+  // 0: email only, 1: + handle, 2: + consent. Only ever grows.
+  const [step, setStep] = useState(0);
+  const [invalid, setInvalid] = useState(null); // "email" | "handle" | "consent"
   const [busy, setBusy] = useState(false);
-  const [done, setDone] = useState(false);
-  const [msg, setMsg] = useState(null); // {text, ok}
+  const [msg, setMsg] = useState(null);
+
+  const reach = (n) => setStep((s) => Math.max(s, n));
+
+  function fail(field, text) {
+    setInvalid(field);
+    setMsg(text);
+    reach(2);
+  }
 
   async function onSubmit(e) {
     e.preventDefault();
     const value = email.trim();
+    const x = cleanHandle(handle);
 
-    if (!EMAIL.test(value)) {
-      setMsg({ text: "That email looks off. Check it and try again.", ok: false });
-      return;
-    }
+    if (!EMAIL.test(value)) return fail("email", "That email looks off. Check it and try again.");
+    if (!HANDLE.test(x)) return fail("handle", "Add your X handle, like @keepyoursxyz.");
+    if (!consent) return fail("consent", "Tick the box so I can tag you at launch.");
 
+    setInvalid(null);
+    setMsg(null);
     setBusy(true);
     try {
       // Posted to our own route, which forwards it server-side. No CORS, and
@@ -26,24 +58,45 @@ export default function WaitlistForm() {
       const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: value, source: "keepyours.xyz" }),
+        body: JSON.stringify({ email: value, handle: x, consent: true, source: "keepyours.xyz" }),
       });
       if (!res.ok) throw new Error("bad response");
-      setDone(true);
-      setMsg({ text: "You're on the list. I'll email you once, when it opens.", ok: true });
+      onJoined({ email: value, handle: x });
     } catch {
-      setMsg({ text: "That didn't save. Try again, or DM @keepyoursxyz on X.", ok: false });
+      setMsg("That didn't save. Try again, or DM @keepyoursxyz on X.");
       setBusy(false);
     }
   }
 
+  const field = (name) =>
+    "w-full rounded-full border bg-white px-5 py-3.5 text-base text-ink outline-none transition placeholder:text-[#93aa9e] focus:border-green focus:shadow-[0_0_0_4px_rgba(22,184,98,0.14)] " +
+    (invalid === name ? "border-[#e06666]" : "border-line");
+
+  const submit = (
+    <button
+      type="submit"
+      disabled={busy}
+      className={`cursor-pointer rounded-full border-0 bg-linear-[120deg] from-green to-mint px-[22px] text-[15px] font-semibold whitespace-nowrap text-[#03170c] shadow-[0_8px_18px_-8px_rgba(22,184,98,0.9)] transition hover:-translate-y-px hover:shadow-[0_12px_22px_-10px_rgb(22,184,98)] active:scale-[0.97] disabled:translate-y-0 disabled:scale-100 disabled:cursor-default disabled:opacity-60 ${
+        step === 0 ? "py-3 max-[480px]:py-3.5" : "mt-3.5 py-3.5"
+      }`}
+    >
+      {busy ? "Saving…" : "Get early access"}
+    </button>
+  );
+
   return (
     <>
-      {!done && (
-        <form
-          onSubmit={onSubmit}
-          noValidate
-          className="flex gap-2 rounded-full border border-line bg-white p-1.5 shadow-[inset_0_1px_2px_rgba(8,45,28,0.04)] max-[480px]:flex-col max-[480px]:rounded-[22px]"
+      <h2 className="m-0 mb-1.5 font-display text-[19px] font-semibold">Join the waitlist</h2>
+      <p className="m-0 mb-[22px] text-sm text-muted">
+        Be one of the first testers. No spam, one email when it opens.
+      </p>
+
+      <form onSubmit={onSubmit} noValidate className="flex flex-col text-left">
+        {/* Same one-row pill as before; the button drops below once the extra fields open. */}
+        <div
+          className={`flex gap-2 rounded-full border bg-white p-1.5 shadow-[inset_0_1px_2px_rgba(8,45,28,0.04)] transition focus-within:border-green focus-within:shadow-[0_0_0_4px_rgba(22,184,98,0.14)] max-[480px]:flex-col max-[480px]:rounded-[22px] ${
+            invalid === "email" ? "border-[#e06666]" : "border-line"
+          }`}
         >
           {/* 16px minimum: iOS Safari zooms the page on focus for any smaller input */}
           <input
@@ -52,30 +105,68 @@ export default function WaitlistForm() {
             placeholder="you@email.com"
             autoComplete="email"
             aria-label="Your email"
+            aria-invalid={invalid === "email"}
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
+            onFocus={() => reach(1)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (invalid === "email") setInvalid(null);
+            }}
             className="min-w-0 flex-1 border-0 bg-transparent px-4 py-3 text-base text-ink outline-none placeholder:text-[#93aa9e] max-[480px]:py-3.5 max-[480px]:text-center"
           />
-          <button
-            type="submit"
-            disabled={busy}
-            className="cursor-pointer rounded-full border-0 bg-linear-[120deg] from-green to-mint px-[22px] py-3 text-[15px] font-semibold whitespace-nowrap text-[#03170c] shadow-[0_8px_18px_-8px_rgba(22,184,98,0.9)] transition hover:-translate-y-px hover:shadow-[0_12px_22px_-10px_rgb(22,184,98)] disabled:translate-y-0 disabled:cursor-default disabled:opacity-60 max-[480px]:py-3.5"
+          {step === 0 && submit}
+        </div>
+
+        <Reveal open={step >= 1}>
+          <div className="relative pt-2.5">
+            <span className="pointer-events-none absolute top-[calc(50%+5px)] left-5 -translate-y-1/2 text-base text-muted">
+              @
+            </span>
+            <input
+              type="text"
+              name="handle"
+              placeholder="your X handle"
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              aria-label="Your X handle"
+              aria-invalid={invalid === "handle"}
+              value={handle}
+              onFocus={() => reach(2)}
+              onChange={(e) => {
+                setHandle(e.target.value.replace(/^@+/, ""));
+                if (invalid === "handle") setInvalid(null);
+              }}
+              className={`${field("handle")} pl-9`}
+            />
+          </div>
+        </Reveal>
+
+        <Reveal open={step >= 2}>
+          <label
+            className={`flex cursor-pointer items-center gap-2.5 px-2 pt-3.5 text-[13px] ${
+              invalid === "consent" ? "text-[#b23a3a]" : "text-ink-2"
+            }`}
           >
-            {busy ? "Saving…" : "Get early access"}
-          </button>
-        </form>
-      )}
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => {
+                setConsent(e.target.checked);
+                if (invalid === "consent") setInvalid(null);
+              }}
+              className="size-4 shrink-0 cursor-pointer accent-green"
+            />
+            It&rsquo;s fine to tag me on X when Keep Yours launches.
+          </label>
+        </Reveal>
+
+        {step > 0 && submit}
+      </form>
 
       {msg && (
-        <div
-          role="status"
-          aria-live="polite"
-          className={
-            "mt-3.5 text-sm " + (msg.ok ? "font-medium text-green-deep" : "text-[#b23a3a]")
-          }
-        >
-          {msg.text}
+        <div role="status" aria-live="polite" className="mt-3.5 text-sm text-[#b23a3a]">
+          {msg}
         </div>
       )}
 
