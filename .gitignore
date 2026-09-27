@@ -17,6 +17,9 @@ contracts/cache/
 contracts/broadcast/
 contracts/lib/
 
+# local reference only, not part of the product
+ui-inspirations/
+
 # os / editors
 .DS_Store
 **/.DS_Store
