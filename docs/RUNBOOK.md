@@ -81,24 +81,48 @@ Repeat for `AdvancePool` and the `KeepVault` implementation. Clones are verified
 
 ## Frontend
 
+The Next.js app lives at the **repo root** (not a separate `app/` package); the product screens are under `app/app/`, next to the waitlist at `app/page.jsx`.
+
 ```bash
-cd app
-pnpm install
-pnpm dev            # local
-vercel --prod       # deploy
+npm install
+npm run dev          # local
+vercel --prod        # deploy (production only from main)
 ```
 
 Environment variables to set in Vercel: `NEXT_PUBLIC_CHAIN`, `NEXT_PUBLIC_FACTORY`, `NEXT_PUBLIC_POOL`, `NEXT_PUBLIC_USDC`, `ZERODEV_PROJECT_ID`, `WAITLIST_ENDPOINT`.
 
 Domain: point `keepyours.xyz` at Vercel **before onboarding anyone**, because passkeys are bound to the domain.
 
-## Keeper (process job)
+## Keeper and Telegram bot (Hetzner VPS)
 
-The app calls `process()` on the user's vault after a deposit is detected. Backup: a scheduled job every 2 minutes that calls `process()` on any vault with unprocessed USDC.
+These run as **one standing Node process on Nimsara's own VPS**, not on Vercel. Vercel's free cron only runs once a day and its per-minute Pro tier costs $20/month for something the VPS already does, continuously, for free (checked 27 Sep 2026).
 
-- Keeper key needs a small amount of ETH on Arbitrum One.
-- `process()` is callable by anyone and only applies the owner's own split rules. If the keeper key leaks, nothing else is at risk.
-- Also run `settle` for any advance past day 90. It is callable by anyone.
+**First-time VPS setup**
+
+```bash
+# as root, once
+adduser keepyours && usermod -aG sudo keepyours
+# copy your SSH public key to the new user, then disable root/password login:
+#   PermitRootLogin no, PasswordAuthentication no  in /etc/ssh/sshd_config
+ufw allow OpenSSH && ufw enable      # only SSH in; outbound stays open for the RPC and Telegram
+```
+
+**Deploying the keeper**
+
+```bash
+# as the keepyours user
+git clone <repo> && cd keepyours/keeper   # a small standalone script, separate from the Next.js app
+npm install
+cp .env.example .env   # KEEPER_PRIVATE_KEY, ARBITRUM_RPC/ARBITRUM_SEPOLIA_RPC, FACTORY, POOL, TELEGRAM_BOT_TOKEN
+chmod 600 .env
+pm2 start index.js --name keepyours-keeper
+pm2 save && pm2 startup   # survives reboots
+```
+
+- It watches every vault the factory has created: a live event subscription if the RPC provider supports WebSockets, otherwise polling every 15–30s (confirm which when building E5 of `BUILD-PLAN.md`), then calls `process()`, `settle()` for advances past day 90, and sends the Telegram alert on each event.
+- The keeper's key holds only a small amount of ETH for gas, in a **dedicated key, never the deployer key**.
+- `process()` and `settle()` are callable by anyone and only apply each vault's own rules. If the keeper key leaks, nothing else is at risk.
+- `pm2 logs keepyours-keeper` to check it's alive; `pm2 restart` after any `.env` or code change.
 
 ## Telegram alerts
 

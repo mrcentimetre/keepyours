@@ -62,6 +62,9 @@ Why each: `docs/ARCHITECTURE.md`.
 - **Installed PWA on a phone.** Mobile browser tab shows install steps; desktop shows a gate page with a QR code. Keep a small "continue in browser (demo)" link so judges can see it.
 - **The front end is built first, on a mock data layer**, and the contracts are wired in afterwards.
 - **Attach keepyours.xyz to Vercel before anyone creates a passkey.** Passkeys are tied to the domain.
+- **New work happens on `dev`**, product screens under `app/app/`, `main` stays deployed as-is. See `docs/BUILD-PLAN.md`.
+- **Keeper + Telegram bot run on Nimsara's Hetzner VPS**, not on Vercel (its free cron is once a day). The app itself stays on Vercel.
+- **Full scope, no trimming, is accepted to run ~8h over the week** (27 Sep–4 Oct); Nimsara works past 8h/day rather than cut features. Revisit if a task runs badly over.
 
 ## Brand
 

@@ -24,12 +24,12 @@ after day 90: anyone can settle, and what is owed is taken from that vault's sav
 | Vault | `KeepVault`, one per user, an EIP-1167 clone of one fixed implementation. OpenZeppelin `SafeERC20` + `ReentrancyGuard` | Each person's savings sit at their own address. No shared pool, no admin withdraw, no upgrade path |
 | Factory | `KeepVaultFactory`, CREATE2 with the owner as salt | The vault address is known before it exists, so the get-paid link works from day one |
 | Advance money | `AdvancePool`, separate from every vault | Advances never spend other users' savings |
-| Split trigger | `process()`, callable by anyone. The app calls it, plus a small keeper as backup | A plain ERC-20 transfer can't run code on arrival |
+| Split trigger | `process()`, callable by anyone. The app calls it on open, plus a standing keeper as backup | A plain ERC-20 transfer can't run code on arrival |
 | Wallet | **ZeroDev** Kernel smart account with a passkey signer. **Passkey only for the MVP.** | No seed phrase, and no third party in the signing path. Built by Offchain Labs. Counts as sponsor tech on the submission form. Privy sign-in (email or Google, with key export and recovery) is a later option |
 | Gas | ZeroDev paymaster sponsors user operations | Users never need ETH. **You pay for it** (see costs below) |
-| Frontend | Next.js + Tailwind CSS v4 + wagmi/viem, mobile-first **PWA** | One codebase, installable, works in a browser tab for the demo |
-| Reads | viem + event logs; small indexer (Ponder or a cron) if needed | No database of balances; the contracts are the source of truth |
-| Alerts | Contract events → Telegram bot; web push later | Telegram is where these users already are |
+| Frontend | Next.js + Tailwind CSS v4 + wagmi/viem, mobile-first **PWA**, hosted on Vercel | One codebase, installable, works in a browser tab for the demo |
+| Reads | viem + event logs | No database of balances; the contracts are the source of truth |
+| Keeper + alerts | One standing Node process on **Nimsara's own Hetzner VPS**, watching vault events and calling `process()`/`settle()`, plus a Telegram bot on the same events | Vercel's free cron only runs once a day (checked 27 Sep 2026), and its per-minute Pro tier is $20/month for something a VPS already does for free, continuously. Telegram is where these users already are |
 | Hosting | Vercel | Fast deploys, preview URLs, custom domain |
 | Tests | Foundry: unit, fuzz and invariant tests; Slither | The invariants in CONTRACTS.md are the spec |
 

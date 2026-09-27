@@ -4,24 +4,17 @@ Written 27 Sep 2026, on the `dev` branch. This plans everything left before the 
 
 One task = up to **8 hours = one solo dev-day**. Where a day holds two tasks, they're each half a day.
 
-## Capacity check first, because the numbers matter
+## Capacity check
 
 | | |
 |---|---|
-| Work planned below (every task, including the two marked `Hold (recommended)`) | **70 hours** |
+| Work planned below, nothing trimmed | **72 hours** |
 | Days from today to the Arbitrum deadline (27 Sep–4 Oct, inclusive, 8h/day) | **64 hours** |
-| Gap before any trim | **6 hours short** |
-| Gap after the two recommended trims (T1.2, T2.2, 3h together) | **still 3 hours short** |
+| Gap | **8 hours short, i.e. 1 extra hour/day across 8 days** |
 
-So the recommended trims help but don't fully close it — I checked the arithmetic twice after catching my own first draft understating it. That residual 3 hours means the demo recording likely slips from the DEMO-SCRIPT.md target of **2 Oct** toward **3 Oct**, leaving little slack before the **4 Oct, 21:29** deadline. Three ways to handle it, pick one:
+**Decision (27 Sep 2026): accept the slip.** Nothing below is trimmed; Nimsara is putting in more than 8h on the heavier days rather than cutting scope. The demo recording will likely land nearer **3 Oct** than the DEMO-SCRIPT.md target of 2 Oct, which leaves little slack before the **4 Oct, 21:29** deadline — worth watching as the week goes, and revisiting this call if a task runs badly over.
 
-1. **Trim more:** on top of T1.2 and T2.2, I can cut about 2h from T1.1 (a plainer desktop gate) and 1h from T6.2 (`SUBMISSION.md` is already templated, mostly fill-in), which closes it fully. Not written into the tasks below yet — say the word and I will.
-2. **Trim only the two already marked, accept 3h of slip.**
-3. **Trim nothing, accept 6h of slip**, recording nearer 3 Oct with no slack before the deadline.
-
-Say which, and I'll mark the doc accordingly before it becomes GitHub issues.
-
-**Already out of this cycle**, per `CLAUDE.md`'s cut line and `SPEC.md`: guardian, verified send, Privy sign-in, yield, score-based limits, the emergency page, and "I have a wallet" (seed-phrase fallback). All listed under Hold at the bottom, not forgotten, just not in the 70 hours above.
+**Already out of this cycle**, per `CLAUDE.md`'s cut line and `SPEC.md`: guardian, verified send, Privy sign-in, yield, score-based limits, the emergency page, and "I have a wallet" (seed-phrase fallback). All listed under Hold at the bottom, not forgotten, just not in the 72 hours above.
 
 ## Branch and directory
 
@@ -33,7 +26,7 @@ Say which, and I'll mark the doc accordingly before it becomes GitHub issues.
 
 ## Epics, stories and tasks
 
-Status: `Todo` · `Hold` (planned for later, not this cycle) · `Hold (recommended)` (cut to close the capacity gap, pending your yes).
+Status: `Todo` · `Hold` (planned for later, not this cycle).
 
 ### E0 — Setup (3h)
 
@@ -41,21 +34,21 @@ Status: `Todo` · `Hold` (planned for later, not this cycle) · `Hold (recommend
 |---|---|---|---|
 | T0.1 | Create `contracts/` (Foundry init, OpenZeppelin, remappings) and `app/app/` route scaffold. `.env.example` gets `ZERODEV_PROJECT_ID`, `NEXT_PUBLIC_FACTORY`, `NEXT_PUBLIC_POOL`. | 3h | — |
 
-**Your action, not dev hours:** create a free ZeroDev Sandbox project and attach `keepyours.xyz` to Vercel (it's not attached yet). Neither blocks Todo tasks below, but both block real passkey testing in E2.
+**Your action, not dev hours:** create a free ZeroDev Sandbox project, attach `keepyours.xyz` to Vercel (it's not attached yet), and have SSH access ready on the Hetzner VPS for E5. None of these block Todo tasks below, but the first two block real passkey testing in E2, and the third blocks E5.
 
-### E1 — Front-end shell (5h, was 7h)
+### E1 — Front-end shell (7h)
 
 | ID | Task | Hours | Depends on | Status |
 |---|---|---|---|---|
 | T1.1 | Install gate: detect standalone/installed state; mobile browser tab shows install steps (Android prompt, iOS Share → Add to Home Screen); desktop shows a QR page; a small "continue in browser (demo)" link for reviewers. | 5h | T0.1 | Todo |
-| T1.2 | Onboarding carousel (3 slides: split, waiting period, advance) | 2h | T1.1 | **Hold (recommended)** — the demo script doesn't need it; setup screen explains the same thing live |
+| T1.2 | Onboarding carousel (3 slides: split, waiting period, advance) | 2h | T1.1 | Todo |
 
-### E2 — Passkey wallet (7h, was 8h)
+### E2 — Passkey wallet (8h)
 
 | ID | Task | Hours | Depends on | Status |
 |---|---|---|---|---|
 | T2.1 | ZeroDev Kernel account with a passkey signer: first-open creates the passkey and the wallet (one Face ID/Touch ID prompt); later opens are a single "Unlock". | 5h | T0.1, your ZeroDev project | Todo |
-| T2.2 | Second-passkey prompt at setup (lost-device mitigation) | 1h | T2.1 | **Hold (recommended)** — worth doing, just not this week |
+| T2.2 | Second-passkey prompt at setup (lost-device mitigation) | 1h | T2.1 | Todo |
 | T2.3 | In-app-browser detection (Telegram, X) → "open in Safari/Chrome" screen | 2h | T2.1 | Todo |
 
 ### E3 — Demo-critical screens, on mock data (16h)
@@ -79,12 +72,14 @@ Per `docs/CONTRACTS.md`: vault, factory, pool, 11 invariants. This is the never-
 | T4.2 | `KeepVaultFactory` (CREATE2 clone, `predictVault`, registry) and `AdvancePool` (`fund`, `lend`, `repay`, `settle`, `setFactory` once). Unit tests. | 8h | T4.1 | Todo |
 | T4.3 | Fuzz and invariant tests for all 11 invariants; Slither pass. | 4h | T4.2 | Todo |
 
-### E5 — Wire to testnet (8h)
+### E5 — Wire to testnet (10h)
+
+The app itself stays on Vercel. The keeper (calls `process()`/`settle()` for anyone) and the Telegram bot run as a standing Node process on the **Hetzner VPS**, not on Vercel — Vercel's own free cron only runs once a day (checked on Vercel's pricing page, 27 Sep 2026), far too slow to feel real in the demo, and Pro's per-minute cron costs $20/month for something the VPS already does for free, continuously.
 
 | ID | Task | Hours | Depends on | Status |
 |---|---|---|---|---|
-| T5.1 | Deploy to Arbitrum Sepolia, verify on Arbiscan. Replace mock data in E3's screens with real reads/writes (viem/wagmi). | 4h | T4.3, T3.4 | Todo |
-| T5.2 | Telegram bot on contract events (`Processed`, `WithdrawRequested`, `Advanced`, `AdvanceRepaid`); wire the withdraw alert into the app. | 4h | T5.1 | Todo |
+| T5.1 | Deploy contracts to Arbitrum Sepolia, verify on Arbiscan. Replace mock data in E3's screens with real reads/writes (viem/wagmi). | 4h | T4.3, T3.4 | Todo |
+| T5.2 | VPS setup: non-root deploy user, SSH-key-only login, firewall (only SSH + what's needed outbound). Deploy the keeper + Telegram bot as one long-lived Node process (systemd or pm2, auto-restart on crash/reboot). It watches vault events — a live subscription if the RPC provider supports it, polling every 15–30s otherwise (confirm which when building) — and calls `process()`/`settle()` plus sends the Telegram alert. The keeper's own wallet holds only a small amount of Sepolia ETH for gas, in a dedicated key, never the deployer key. | 6h | T5.1, VPS access | Todo |
 
 ### E6 — Demo and submission (8h)
 
@@ -101,8 +96,6 @@ These are real, documented features, just not built this week. Each links to whe
 |---|---|---|
 | Guardian | `SPEC.md` §4 | Already Stretch; first on the cut line |
 | Verified send | `SPEC.md` §6 | Third on the cut line; a plain send with a network warning stands in |
-| Second passkey at setup | this doc, T2.2 | Recommended trim, see capacity check |
-| Onboarding carousel | this doc, T1.2 | Recommended trim, see capacity check |
 | "I have a wallet" fallback | `ARCHITECTURE.md` | Passkey-only for the MVP, per the 27 Sep decision |
 | Privy sign-in | `SPEC.md` §9 | Later, by design; adds a provider to the signing path |
 | Emergency page | `SPEC.md` §10 | Later; needed before the "works without our app" claim is fully true for passkey users |
@@ -133,7 +126,7 @@ gantt
     E4 Fuzz, invariants, Slither           :e4c, after e4b, 12h
 
     section Wire and demo
-    E5 Deploy Sepolia + wire + Telegram    :e5, after e3b, 1d
+    E5 Deploy Sepolia + wire + VPS keeper  :e5, after e3b, 1d
     E6 Record demo                         :milestone, e6a, 2026-10-03, 0d
     E6 Submit Arbitrum                     :crit, e6b, after e5, 1d
 
@@ -153,6 +146,7 @@ Mostly reuses this build. Not broken into 8h tasks yet, since it depends on how 
 
 ## What I need from you
 
-1. **Trim or slip?** (see Capacity check)
+1. ~~Trim or slip?~~ **Resolved 27 Sep: accept the slip.**
 2. **Confirm the epic order** — front end (E1–E3), contracts (E4), wiring (E5), demo (E6). Contracts could run first instead; say if you'd rather.
-3. Once you're happy with this doc, tell me and I'll turn each task into a GitHub issue with labels for the epic and status, so you can move them across a project board as we go.
+3. When it's time for E5: SSH access to the Hetzner VPS (or you run the deploy commands yourself from a runbook I write).
+4. Once you're happy with this doc, tell me and I'll turn each task into a GitHub issue with labels for the epic and status, so you can move them across a project board as we go.
