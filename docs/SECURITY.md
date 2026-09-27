@@ -9,7 +9,7 @@
 1. **Non-custodial.** No admin key can move user funds. Each user's savings sit in **their own vault contract**, with no shared pool. There is no pause that traps money, and no sweep function.
 2. **Small surface.** Three contracts, no upgrade path (the vaults are immutable clones of one fixed implementation), no external calls except USDC transfers (and Aave later, opt-in).
 3. **Slow is safe.** Anything that weakens protection (shorter cooldown, new safe address, removing a guardian) waits out the current cooldown.
-4. **Fail toward the user.** If the keeper dies, anyone can call `process()`. If the frontend dies, the contracts still work from a block explorer.
+4. **Fail toward the user.** If the keeper dies, anyone can call `process()`. If the frontend dies, the vault still works and the code is open, so any app can use it. For passkey users this needs the planned standalone emergency page, because a passkey account cannot sign from a block explorer.
 5. **Advances never spend other people's money.** They come from a separate pool, backed by the borrower's own locked savings.
 
 ## Threat model
@@ -32,6 +32,8 @@
 | USDC freeze | Circle blacklists an address | Documented, not mitigable. Multi-token support later spreads the risk. | Medium |
 | Aave risk (later) | Yield protocol loss | Opt-in only, a standard protocol not the highest rate, rate and risk shown, cap the share of each vault | Deferred |
 | User locks themselves out | Can't reach money in an emergency | Cooldown is capped at 30 days and is always cancellable; guardian path; advance covers urgent cash | Low |
+| **User loses every device** | No way back into the passkey account | Passkey-only has no recovery by design. The app asks for a second passkey at setup; the optional guardian can help with a stuck withdrawal. We cannot reset it and we say so. | **Medium, accepted for the MVP** |
+| **Provider in the signing path (later, Privy)** | A third party's outage, terms change or compromise, or a takeover of the user's login account, affects signing | Offered as a choice, not forced. The user can export their key. The vault limits damage: savings only go to the safe address, changes wait, alerts fire. | Deferred |
 | **Regulatory: custody** | A regulator treats the product as custody | Only the user can move their savings; no shared pool; plain-language user agreement; capped mainnet; get legal advice before real users. This is not legal advice. | **Open** |
 
 ## Practices

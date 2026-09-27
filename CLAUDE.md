@@ -56,6 +56,13 @@ Why each: `docs/ARCHITECTURE.md`.
 - **Yield later, from a standard protocol (Aave v3)**, never a custodial platform. Safety over rate.
 - **Security is priority one.** User agreement before real users. Mainnet stays capped.
 
+## Front end decisions (27 Sep 2026)
+
+- **Passkey only for the MVP.** No third party in the signing path. Privy sign-in is a later option, never forced.
+- **Installed PWA on a phone.** Mobile browser tab shows install steps; desktop shows a gate page with a QR code. Keep a small "continue in browser (demo)" link so judges can see it.
+- **The front end is built first, on a mock data layer**, and the contracts are wired in afterwards.
+- **Attach keepyours.xyz to Vercel before anyone creates a passkey.** Passkeys are tied to the domain.
+
 ## Brand
 
 Colours: Night `#060E0A`, Card `#12211A`, Keep green `#16B862`, Mint `#62E6A0`, Cooldown amber `#F4B545`, Block red `#FF7070`, Muted `#8CA497`, Ink `#EAF5EF`.

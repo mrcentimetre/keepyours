@@ -14,6 +14,14 @@ Freelancers, contractors and web3 contributors paid in USDC/USDT, starting with 
 
 Priority key: **MVP** = must work for the 4 Oct demo · **Stretch** = if time allows · **Later** = after the hackathon.
 
+### 0. Onboarding and install — MVP
+
+- **Passkey only.** First open creates a passkey (one Face ID prompt) and with it the wallet. Later opens are one "Unlock" button. No email, no password, no seed phrase.
+- The app is an **installed PWA** on a phone. A mobile browser tab shows install steps; desktop shows a gate page with a QR code and a phone-shaped preview. A small "continue in browser (demo)" link stays for reviewers.
+- Setup asks for a **second passkey** (another device), because a lost device has no recovery.
+- "I have a wallet" is the fallback for people who prefer a seed-phrase wallet.
+- The domain must be live before anyone creates a passkey. Passkeys are tied to it.
+
 ### 1. Get paid link — MVP
 
 - Create a request: amount, optional note.
@@ -70,6 +78,17 @@ Priority key: **MVP** = must work for the 4 Oct demo · **Stretch** = if time al
 
 - Raise the advance limit above 50% using an on-chain or social score (Nomis, Ethos and similar, as credi.fi does).
 - Needs outside data and means lending against less than the full amount, so it is not for the hackathon.
+
+### 9. Privy sign-in — Later
+
+- Sign in with Google or email, with key export and recovery, for people who do not want to manage a passkey.
+- Works with ZeroDev as the signer for the same smart account. Free for the first 499 monthly users (Privy pricing page, checked 26 Sep 2026).
+- It puts a provider in the signing path, so it is a choice next to the passkey, never the only option. If there is time before 4 Oct it may be added; otherwise it waits.
+- The exact recovery mode and what happens if someone takes over the user's login account are still to be read in Privy's docs.
+
+### 10. Emergency page — Later
+
+- A small standalone page in the repo, hostable by anyone, that builds the passkey signature and calls `requestWithdraw` and `executeWithdraw` on the user's vault. It is what makes "works without our app" true for passkey users.
 
 ## Out of scope on purpose
 

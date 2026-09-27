@@ -25,7 +25,7 @@ after day 90: anyone can settle, and what is owed is taken from that vault's sav
 | Factory | `KeepVaultFactory`, CREATE2 with the owner as salt | The vault address is known before it exists, so the get-paid link works from day one |
 | Advance money | `AdvancePool`, separate from every vault | Advances never spend other users' savings |
 | Split trigger | `process()`, callable by anyone. The app calls it, plus a small keeper as backup | A plain ERC-20 transfer can't run code on arrival |
-| Wallet | **ZeroDev** Kernel smart account with a passkey signer | No seed phrase. Built by Offchain Labs. Counts as sponsor tech on the submission form |
+| Wallet | **ZeroDev** Kernel smart account with a passkey signer. **Passkey only for the MVP.** | No seed phrase, and no third party in the signing path. Built by Offchain Labs. Counts as sponsor tech on the submission form. Privy sign-in (email or Google, with key export and recovery) is a later option |
 | Gas | ZeroDev paymaster sponsors user operations | Users never need ETH. **You pay for it** (see costs below) |
 | Frontend | Next.js + Tailwind CSS v4 + wagmi/viem, mobile-first **PWA** | One codebase, installable, works in a browser tab for the demo |
 | Reads | viem + event logs; small indexer (Ponder or a cron) if needed | No database of balances; the contracts are the source of truth |
@@ -69,9 +69,24 @@ Costs of the choice:
 
 ## Passkeys, practically
 
-- Passkeys are WebAuthn, so they need **HTTPS and a stable domain**. A passkey created on a Vercel preview URL will not work on keepyours.xyz, so the domain goes live before anyone is onboarded.
+- Passkeys are WebAuthn, so they need **HTTPS and a stable domain**. A passkey created on a Vercel preview URL will not work on keepyours.xyz, so **the domain is attached to Vercel before anyone creates a passkey.** Today `keepyours.xyz` is not attached.
+- **First open** creates the passkey (one Face ID prompt), which creates the wallet. **Every later open** is a single "Unlock" button. There is no email or password.
 - **In-app browsers** (Telegram, X) often fail to create passkeys. The app detects them and shows "open in Safari/Chrome".
 - Fallback path: "I have a wallet" (injected or WalletConnect).
+- **Lost devices:** a user who loses every device with the passkey has no recovery. The app tells them to add a second passkey (another device) during setup, and the optional guardian can help with a stuck withdrawal. We cannot reset a passkey, and we say so.
+- **Later:** Privy sign-in (email or Google) for people who want recovery. It puts a provider in the signing path, so it is offered as a choice, never forced.
+
+## PWA only
+
+The app is meant to be used as an installed PWA on a phone.
+
+- **Detect** the installed state: `display-mode: standalone`, plus `navigator.standalone` on iOS.
+- **Installed:** show the app.
+- **Mobile browser tab:** an install screen with steps for the platform. Android/Chrome uses the install prompt; iOS uses Share, then Add to Home Screen (there is no prompt on iOS).
+- **Desktop:** a gate page with a phone-shaped preview, a QR code and the install steps.
+- **Reviewers:** a small "continue in browser (demo)" link, so judges opening the link on a laptop still see the product. A hard block is possible if we decide it is worth the risk.
+- The waitlist page stays at `/`. The app lives under its own path, with the manifest `start_url` pointing at it.
+- To check on a real iPhone: passkeys created in Safari must also work in the installed app.
 
 ## Environments
 
@@ -85,4 +100,4 @@ Costs of the choice:
 
 ## What is deliberately not here
 
-No backend database of user funds, no custody, no admin keys, no shared pool of savings, no off-chain matching engine. If the frontend disappears, a user can still call `requestWithdraw` and `executeWithdraw` on their own vault straight from Arbiscan.
+No backend database of user funds, no custody, no admin keys, no shared pool of savings, no off-chain matching engine. If our frontend disappears, the vault still works and the contracts are open, so any app can talk to it. **Correction (27 Sep):** a passkey smart account cannot sign from Arbiscan's Write Contract page, so "withdraw straight from Arbiscan" only holds for a user whose owner is a normal wallet. The planned answer for passkey users is a small standalone **emergency page** in the repo that anyone can host, which builds the passkey signature and calls `requestWithdraw` and `executeWithdraw`. It does not exist yet.
