@@ -46,8 +46,45 @@ export function addSimulatedPayment(totalUsdc: number, keepBps: number): Payment
   return payment;
 }
 
+const WITHDRAWALS_KEY = "ky_mock_withdrawals";
+
+export function getWithdrawnTotal(): number {
+  try {
+    const raw = localStorage.getItem(WITHDRAWALS_KEY);
+    if (!raw) return 0;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.reduce((sum: number, n: number) => sum + n, 0) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** Called once a pending withdrawal (lib/mock-withdrawal.ts) actually
+ * releases — moves it from "pending" into the completed total that
+ * getKeptBalance() subtracts, same relationship as the real contract's
+ * saved/withdrawn accounting. */
+export function recordWithdrawal(amountUsdc: number): void {
+  try {
+    const withdrawals = [...getPastWithdrawals(), amountUsdc];
+    localStorage.setItem(WITHDRAWALS_KEY, JSON.stringify(withdrawals));
+  } catch {
+    // fine without persistence; balance just won't reflect it on reload
+  }
+}
+
+function getPastWithdrawals(): number[] {
+  try {
+    const raw = localStorage.getItem(WITHDRAWALS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 export function getKeptBalance(): number {
-  return getPayments().reduce((sum, p) => sum + p.keptUsdc, 0);
+  const kept = getPayments().reduce((sum, p) => sum + p.keptUsdc, 0);
+  return Math.round((kept - getWithdrawnTotal()) * 100) / 100;
 }
 
 export function getSpentTotal(): number {
