@@ -2,30 +2,27 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { CircleCheck } from "lucide-react";
 import {
   DEFAULT_SETTINGS,
   COOLDOWN_PRESETS,
   saveVaultSettings,
   type VaultSettings,
 } from "@/lib/vault-settings";
+import { cn } from "@/lib/utils";
+import { FlowScreen, FlowTitle, FlowBody, BrandMark } from "./app/flow";
+import { SectionLabel } from "./app/screen";
+import { Card } from "./ui/card";
+import { Button } from "./ui/button";
 
-function Logo() {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src="/logo-128.png" alt="" width={40} height={40} className="block" />
-  );
-}
-
-function bpsToPct(bps: number): number {
-  return Math.round(bps / 100);
-}
+const EXAMPLE = 100; // a worked example, not anyone's balance
 
 export default function SetupScreen() {
   const router = useRouter();
   const [keepBps, setKeepBps] = useState(DEFAULT_SETTINGS.keepBps);
   const [cooldownSeconds, setCooldownSeconds] = useState(DEFAULT_SETTINGS.cooldownSeconds);
 
-  const keepPct = bpsToPct(keepBps);
+  const keepPct = Math.round(keepBps / 100);
   const spendPct = 100 - keepPct;
 
   function confirm() {
@@ -35,76 +32,90 @@ export default function SetupScreen() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center gap-10 p-8 pt-16 pb-12">
-      <div className="flex flex-col items-center gap-3 text-center">
-        <Logo />
-        <p className="font-display text-[26px] font-bold">Set up your vault</p>
-        <p className="max-w-[38ch] text-sm text-[#8CA497]">
-          One setting for now. You can change this later.
-        </p>
+    <FlowScreen>
+      <BrandMark />
+
+      <div className="flex flex-1 flex-col gap-7 py-8">
+        <div className="flex flex-col gap-3">
+          <FlowTitle>Set up your vault</FlowTitle>
+          <FlowBody>Two choices. Both show in Settings afterwards.</FlowBody>
+        </div>
+
+        <Card className="p-5">
+          <SectionLabel>Split every payment</SectionLabel>
+          <p className="mt-1 text-[13px] text-muted-foreground">A ${EXAMPLE} payment would become:</p>
+
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-accent/10 p-3.5 ring-1 ring-accent/20">
+              <p className="text-[11px] font-bold tracking-[0.1em] text-accent uppercase">Spend · {spendPct}%</p>
+              <p className="mt-1 font-mono text-[24px] font-semibold tracking-[-0.03em] tabular-nums">
+                ${((EXAMPLE * spendPct) / 100).toFixed(0)}
+              </p>
+            </div>
+            <div className="rounded-2xl bg-primary/12 p-3.5 ring-1 ring-primary/30">
+              <p className="text-[11px] font-bold tracking-[0.1em] text-primary uppercase">Keep · {keepPct}%</p>
+              <p className="mt-1 font-mono text-[24px] font-semibold tracking-[-0.03em] tabular-nums">
+                ${((EXAMPLE * keepPct) / 100).toFixed(0)}
+              </p>
+            </div>
+          </div>
+
+          <input
+            type="range"
+            min={0}
+            max={10000}
+            step={500}
+            value={keepBps}
+            onChange={(e) => setKeepBps(Number(e.target.value))}
+            aria-label="Percent to keep"
+            aria-valuetext={`Keep ${keepPct} percent`}
+            className="mt-5 w-full cursor-pointer"
+          />
+          <div className="mt-1 flex justify-between text-[12px] text-muted-foreground">
+            <span>Spend more</span>
+            <span>Keep more</span>
+          </div>
+        </Card>
+
+        <div className="flex flex-col gap-3">
+          <div>
+            <SectionLabel>Waiting period</SectionLabel>
+            <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+              How long a withdrawal from savings waits before it leaves. Cancel any time before then.
+            </p>
+          </div>
+          <div role="radiogroup" aria-label="Waiting period" className="grid grid-cols-2 gap-2.5">
+            {COOLDOWN_PRESETS.map((preset) => {
+              const active = preset.seconds === cooldownSeconds;
+              return (
+                <button
+                  key={preset.label}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => setCooldownSeconds(preset.seconds)}
+                  className={cn(
+                    "flex items-center justify-between rounded-[18px] px-4 py-3.5 text-left transition-all active:scale-[0.98]",
+                    active ? "bg-primary/12 ring-2 ring-primary" : "bg-card ring-1 ring-hairline hover:bg-surface-2"
+                  )}
+                >
+                  <span>
+                    <span className="block text-[15px] font-semibold">{preset.label}</span>
+                    <span className="block text-[12px] text-muted-foreground">
+                      {preset.seconds === DEFAULT_SETTINGS.cooldownSeconds ? "Default" : "Longer wait"}
+                    </span>
+                  </span>
+                  {active && <CircleCheck className="size-5 text-primary" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      <section className="flex w-full max-w-[420px] flex-col gap-4">
-        <div className="flex items-baseline justify-between">
-          <h3 className="font-display text-[15px] font-bold">Split on arrival</h3>
-          <p className="font-mono text-[13px] text-[#8CA497]">
-            Spend {spendPct}% · Keep {keepPct}%
-          </p>
-        </div>
-
-        <div className="flex h-3 gap-1 overflow-hidden rounded-full">
-          <div className="bg-[#62E6A0]" style={{ width: `${spendPct}%` }} />
-          <div className="bg-[#16B862]" style={{ width: `${keepPct}%` }} />
-        </div>
-
-        <input
-          type="range"
-          min={0}
-          max={10000}
-          step={500}
-          value={keepBps}
-          onChange={(e) => setKeepBps(Number(e.target.value))}
-          aria-label="Percent to keep"
-          className="h-2 w-full cursor-pointer appearance-none rounded-full bg-[#1E3428] accent-[#16B862]"
-        />
-      </section>
-
-      <section className="flex w-full max-w-[420px] flex-col gap-4">
-        <h3 className="font-display text-[15px] font-bold">Waiting period</h3>
-        <p className="text-[13px] leading-relaxed text-[#8CA497]">
-          Withdrawals from your savings wait this long, and only ever go to
-          your own safe address. Cancel any time before it releases.
-        </p>
-
-        <div className="grid grid-cols-2 gap-2">
-          {COOLDOWN_PRESETS.map((preset) => {
-            const active = preset.seconds === cooldownSeconds;
-            return (
-              <button
-                key={preset.label}
-                type="button"
-                onClick={() => setCooldownSeconds(preset.seconds)}
-                className={
-                  "rounded-2xl border px-4 py-3 text-[14px] font-semibold transition " +
-                  (active
-                    ? "border-[#16B862] bg-[#12211A] text-[#EAF5EF]"
-                    : "border-[#1E3428] bg-transparent text-[#8CA497] hover:border-[#2C4A3B]")
-                }
-              >
-                {preset.label}
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <button
-        type="button"
-        onClick={confirm}
-        className="w-full max-w-[420px] rounded-full bg-gradient-to-r from-[#16B862] to-[#62E6A0] py-3.5 text-[15px] font-semibold text-[#03170C]"
-      >
+      <Button size="lg" onClick={confirm} className="w-full">
         Continue
-      </button>
-    </main>
+      </Button>
+    </FlowScreen>
   );
 }

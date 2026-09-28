@@ -1,11 +1,8 @@
 "use client";
 
-function Logo() {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src="/logo-128.png" alt="" width={40} height={40} className="block" />
-  );
-}
+import { Cloud, TriangleAlert } from "lucide-react";
+import { FlowScreen, IconOrb, FlowTitle, FlowBody } from "./app/flow";
+import { Button } from "./ui/button";
 
 /**
  * T2.2 — shown once, right after a fresh passkey creation.
@@ -25,28 +22,28 @@ function Logo() {
  */
 export default function SecondDeviceNotice({ onContinue }: { onContinue: () => void }) {
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 p-8 text-center">
-      <div className="flex flex-col items-center gap-3">
-        <Logo />
-        <p className="font-display text-[26px] font-bold">One more thing</p>
-        <p className="max-w-[38ch] text-[15px] leading-relaxed text-[#8CA497]">
-          This passkey is the only way into your wallet. If iCloud Keychain or
-          Google Password Manager sync is turned on for this device, it&rsquo;s
-          already available on your other signed-in devices.
-        </p>
-        <p className="max-w-[38ch] text-[15px] leading-relaxed text-[#F4B545]">
-          There&rsquo;s no other backup yet. If you lose every device, this
-          wallet cannot be recovered.
-        </p>
+    <FlowScreen>
+      <div className="flex flex-1 flex-col justify-center gap-8">
+        <IconOrb>
+          <Cloud className="size-11" strokeWidth={1.75} />
+        </IconOrb>
+        <div className="flex flex-col gap-3">
+          <FlowTitle>One more thing</FlowTitle>
+          <FlowBody>
+            This passkey is the only way into your wallet. If iCloud Keychain or Google Password
+            Manager sync is on for this device, it&rsquo;s already on your other signed-in devices.
+          </FlowBody>
+        </div>
+        <div className="flex gap-3 rounded-[20px] bg-warning/10 p-4 ring-1 ring-warning/25">
+          <TriangleAlert className="mt-0.5 size-5 shrink-0 text-warning" />
+          <p className="text-[13.5px] leading-relaxed text-warning">
+            There&rsquo;s no other backup yet. If you lose every device, this wallet can&rsquo;t be recovered.
+          </p>
+        </div>
       </div>
-
-      <button
-        type="button"
-        onClick={onContinue}
-        className="rounded-full bg-gradient-to-r from-[#16B862] to-[#62E6A0] px-8 py-3.5 text-[15px] font-semibold text-[#03170C]"
-      >
-        Got it
-      </button>
-    </main>
+      <Button size="lg" onClick={onContinue} className="w-full">
+        I understand
+      </Button>
+    </FlowScreen>
   );
 }

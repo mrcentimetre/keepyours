@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Download, EllipsisVertical, Share, Smartphone, SquarePlus } from "lucide-react";
 import QrCode from "./qr-code";
+import { FlowScreen, IconOrb, FlowTitle, FlowBody, BrandMark } from "./app/flow";
+import { Button } from "./ui/button";
 import OnboardingCarousel, { ONBOARDED_KEY } from "./onboarding-carousel";
 import WalletGate from "./wallet-gate";
 import InAppBrowserNotice from "./in-app-browser-notice";
@@ -47,37 +50,36 @@ function detectStandalone(): boolean {
   );
 }
 
-function Logo() {
+function ContinueInBrowser({ onContinue }: { onContinue: () => void }) {
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src="/logo-128.png" alt="" width={40} height={40} className="block" />
+    <Button variant="ghost" size="sm" onClick={onContinue} className="self-center">
+      Continue in browser (demo)
+    </Button>
   );
 }
 
-function ContinueInBrowser({ onContinue }: { onContinue: () => void }) {
+function Step({ n, children }: { n: number; children: React.ReactNode }) {
   return (
-    <button
-      type="button"
-      onClick={onContinue}
-      className="text-[13px] text-[#8CA497] underline decoration-[#2C4A3B] underline-offset-4 hover:text-[#BFD8C9]"
-    >
-      Continue in browser (demo)
-    </button>
+    <li className="flex items-center gap-3 rounded-[18px] bg-card p-4 ring-1 ring-hairline">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[13px] font-bold">
+        {n}
+      </span>
+      <span className="flex-1 text-[14px] leading-snug">{children}</span>
+    </li>
   );
 }
 
 function IosSteps() {
   return (
-    <div className="flex flex-col items-center gap-4 text-center">
-      <p className="text-[15px] leading-relaxed text-[#BFD8C9]">
-        Tap the <b className="text-[#EAF5EF]">Share</b> icon in Safari&rsquo;s toolbar,
-        then <b className="text-[#EAF5EF]">Add to Home Screen</b>.
-      </p>
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#62E6A0" strokeWidth="2" aria-hidden="true">
-        <path d="M12 2v13M12 2l-4 4M12 2l4 4" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </div>
+    <ol className="flex flex-col gap-3">
+      <Step n={1}>
+        Tap <Share className="mx-0.5 inline size-4 align-[-3px] text-accent" /> <b>Share</b> in Safari&rsquo;s toolbar
+      </Step>
+      <Step n={2}>
+        Choose <SquarePlus className="mx-0.5 inline size-4 align-[-3px] text-accent" /> <b>Add to Home Screen</b>
+      </Step>
+      <Step n={3}>Open Keep Yours from your home screen</Step>
+    </ol>
   );
 }
 
@@ -100,44 +102,44 @@ function AndroidSteps({
   }
 
   return (
-    <div className="flex flex-col items-center gap-4 text-center">
+    <div className="flex flex-col gap-3">
       {deferredPrompt && (
-        <button
-          type="button"
-          onClick={install}
-          disabled={installing}
-          className="rounded-full bg-gradient-to-r from-[#16B862] to-[#62E6A0] px-6 py-3 text-[15px] font-semibold text-[#03170C] disabled:opacity-60"
-        >
+        <Button onClick={install} disabled={installing} className="w-full">
+          <Download />
           {installing ? "Installing…" : "Install Keep Yours"}
-        </button>
+        </Button>
       )}
-      <p className="text-[15px] leading-relaxed text-[#BFD8C9]">
-        Or open your browser&rsquo;s menu (⋮) and choose{" "}
-        <b className="text-[#EAF5EF]">Add to Home screen</b> or{" "}
-        <b className="text-[#EAF5EF]">Install app</b>.
-      </p>
+      <ol className="flex flex-col gap-3">
+        <Step n={1}>
+          {deferredPrompt ? "Or open" : "Open"} your browser&rsquo;s menu{" "}
+          <EllipsisVertical className="inline size-4 align-[-3px] text-accent" />
+        </Step>
+        <Step n={2}>
+          Choose <b>Add to Home screen</b> or <b>Install app</b>
+        </Step>
+      </ol>
     </div>
   );
 }
 
 function OtherMobileSteps() {
   return (
-    <p className="text-[15px] leading-relaxed text-[#BFD8C9]">
-      Open your browser&rsquo;s menu and look for{" "}
-      <b className="text-[#EAF5EF]">Add to Home Screen</b> or{" "}
-      <b className="text-[#EAF5EF]">Install app</b>.
-    </p>
+    <ol className="flex flex-col gap-3">
+      <Step n={1}>Open your browser&rsquo;s menu</Step>
+      <Step n={2}>
+        Look for <b>Add to Home Screen</b> or <b>Install app</b>
+      </Step>
+    </ol>
   );
 }
 
-function DesktopGate({ url, onContinue }: { url: string; onContinue: () => void }) {
+function DesktopGate({ url }: { url: string }) {
   return (
-    <div className="flex flex-col items-center gap-5 text-center">
-      <QrCode value={url} />
-      <p className="text-[15px] leading-relaxed text-[#BFD8C9]">
-        Scan this with your phone, then add it to your home screen.
+    <div className="flex flex-col items-center gap-4 rounded-[24px] bg-card p-6 text-center ring-1 ring-hairline shadow-card">
+      <QrCode value={url} size={180} />
+      <p className="max-w-[30ch] text-[14px] leading-relaxed text-muted-foreground">
+        Scan with your phone&rsquo;s camera, then add it to your home screen.
       </p>
-      <ContinueInBrowser onContinue={onContinue} />
     </div>
   );
 }
@@ -217,27 +219,30 @@ export default function InstallGate() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-8 p-8 text-center">
-      <div className="flex flex-col items-center gap-3">
-        <Logo />
-        <p className="font-display text-[28px] font-bold">Install Keep Yours</p>
-        <p className="max-w-[38ch] text-sm text-[#8CA497]">
-          Keep Yours works best as an app on your phone.
-        </p>
-      </div>
-
-      {platform === "ios" && <IosSteps />}
-      {platform === "android" && (
-        <AndroidSteps deferredPrompt={deferredPrompt} onInstalled={() => setStandalone(true)} />
-      )}
-      {platform === "other-mobile" && <OtherMobileSteps />}
-      {platform === "desktop" && <DesktopGate url={url} onContinue={continueInBrowser} />}
-
-      {platform !== "desktop" && (
-        <div className="pt-2">
-          <ContinueInBrowser onContinue={continueInBrowser} />
+    <FlowScreen>
+      <BrandMark />
+      <div className="flex flex-1 flex-col justify-center gap-8 py-8">
+        {platform !== "desktop" && (
+          <IconOrb>
+            <Smartphone className="size-11" strokeWidth={1.75} />
+          </IconOrb>
+        )}
+        <div className="flex flex-col gap-3">
+          <FlowTitle>{platform === "desktop" ? "Open it on your phone" : "Install Keep Yours"}</FlowTitle>
+          <FlowBody>
+            Keep Yours is a phone app. Installed, it opens full screen and your passkey stays on
+            your device.
+          </FlowBody>
         </div>
-      )}
-    </main>
+
+        {platform === "ios" && <IosSteps />}
+        {platform === "android" && (
+          <AndroidSteps deferredPrompt={deferredPrompt} onInstalled={() => setStandalone(true)} />
+        )}
+        {platform === "other-mobile" && <OtherMobileSteps />}
+        {platform === "desktop" && <DesktopGate url={url} />}
+      </div>
+      <ContinueInBrowser onContinue={continueInBrowser} />
+    </FlowScreen>
   );
 }

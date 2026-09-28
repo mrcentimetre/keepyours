@@ -1,62 +1,122 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { ArrowDownLeft, ArrowRight, Lock, Wallet, Zap } from "lucide-react";
+import { cn } from "@/lib/utils";
 import SlideToConfirm from "./slide-to-confirm";
+import CountdownRing from "./countdown-ring";
+import { FlowScreen, FlowTitle, FlowBody, BrandMark } from "./app/flow";
 
 export const ONBOARDED_KEY = "ky_onboarded";
 
-type Slide = {
-  headline: string;
-  body: string;
-  icon: React.ReactNode;
-};
+// ── Illustrations ─────────────────────────────────────────────
+// Built from the app's own pieces (cards, the countdown ring, the fee bar)
+// so what someone sees here is what they'll actually use. Amounts are a
+// worked example, labelled as one — not anyone's real balance.
 
-function SplitIcon() {
+function Float({ className, children }: { className?: string; children: React.ReactNode }) {
   return (
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 3v6" stroke="#62E6A0" strokeWidth="2" strokeLinecap="round" />
-      <path d="M12 9c0 3-5 3-5 7M12 9c0 3 5 3 5 7" stroke="#62E6A0" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="7" cy="18" r="2.5" fill="#62E6A0" />
-      <circle cx="17" cy="18" r="2.5" fill="#16B862" />
-    </svg>
+    <div
+      className={cn(
+        "rounded-[20px] bg-card/90 ring-1 ring-white/[0.08] shadow-float backdrop-blur-md",
+        className
+      )}
+    >
+      {children}
+    </div>
   );
 }
 
-function CooldownIcon() {
+function SplitArt() {
   return (
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="13" r="8" stroke="#F4B545" strokeWidth="2" />
-      <path d="M12 9v4l3 2" stroke="#F4B545" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M9 2h6" stroke="#F4B545" strokeWidth="2" strokeLinecap="round" />
-    </svg>
+    <div className="relative mx-auto flex h-[300px] w-full max-w-[320px] flex-col items-center justify-center">
+      <Float className="flex w-[230px] items-center gap-3 px-4 py-3.5">
+        <span className="flex size-10 items-center justify-center rounded-full bg-primary/15 text-primary">
+          <ArrowDownLeft className="size-5" />
+        </span>
+        <div>
+          <p className="text-[12px] text-muted-foreground">Client payment</p>
+          <p className="font-mono text-[18px] font-semibold tabular-nums">$100.00</p>
+        </div>
+      </Float>
+      <svg width="200" height="56" viewBox="0 0 200 56" fill="none" aria-hidden="true" className="my-1">
+        <path d="M100 0 V16 C100 34 40 30 40 56" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="4 6" />
+        <path d="M100 0 V16 C100 34 160 30 160 56" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="4 6" />
+      </svg>
+      <div className="flex gap-4">
+        <Float className="w-[140px] -rotate-3 px-4 py-3">
+          <p className="text-[11px] font-bold tracking-[0.1em] text-accent uppercase">Spend · 60%</p>
+          <p className="mt-1 font-mono text-[20px] font-semibold tabular-nums">$60.00</p>
+        </Float>
+        <Float className="w-[140px] rotate-3 px-4 py-3 ring-primary/40">
+          <p className="flex items-center gap-1 text-[11px] font-bold tracking-[0.1em] text-primary uppercase">
+            <Lock className="size-3" /> Keep · 40%
+          </p>
+          <p className="mt-1 font-mono text-[20px] font-semibold tabular-nums">$40.00</p>
+        </Float>
+      </div>
+    </div>
   );
 }
 
-function AdvanceIcon() {
+function CooldownArt() {
   return (
-    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="3" y="10" width="18" height="11" rx="2" stroke="#62E6A0" strokeWidth="2" />
-      <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#62E6A0" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="12" cy="15.5" r="1.6" fill="#16B862" />
-    </svg>
+    <div className="relative mx-auto flex h-[300px] items-center justify-center">
+      <CountdownRing progress={0.64} color="var(--warning)" size={230} stroke={14}>
+        <p className="font-mono text-[40px] font-semibold tracking-[-0.03em] text-warning tabular-nums">72h</p>
+        <p className="text-[12px] text-muted-foreground">waiting period</p>
+      </CountdownRing>
+      <Float className="absolute -right-12 bottom-0 flex items-center gap-2 px-3 py-2">
+        <span className="size-2 rounded-full bg-warning" />
+        <span className="text-[12px] font-semibold">Cancel any time</span>
+      </Float>
+    </div>
   );
 }
 
-const SLIDES: Slide[] = [
+function AdvanceArt() {
+  return (
+    <div className="relative mx-auto flex h-[300px] w-full max-w-[320px] flex-col items-center justify-center gap-4">
+      <Float className="w-[260px] p-5">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-[10.5px] font-bold tracking-[0.12em] text-muted-foreground uppercase">Available now</p>
+            <p className="mt-1 font-mono text-[28px] font-semibold tabular-nums">$70.00</p>
+          </div>
+          <span className="flex size-10 items-center justify-center rounded-full bg-primary/15 text-primary">
+            <Zap className="size-5" />
+          </span>
+        </div>
+        <div className="mt-4 flex h-2 gap-1 overflow-hidden rounded-full">
+          <div className="flex-1 bg-primary" />
+          <div className="flex-1 bg-warning/60" />
+          <div className="flex-1 bg-warning" />
+        </div>
+        <p className="mt-2 text-[12px] font-semibold text-primary">Free for 30 days</p>
+      </Float>
+      <Float className="flex items-center gap-2 px-3 py-2">
+        <Wallet className="size-4 text-accent" />
+        <span className="text-[12px] font-semibold">Repaid from your next payment</span>
+      </Float>
+    </div>
+  );
+}
+
+const SLIDES = [
   {
-    headline: "Every payment splits",
-    body: "Set it once. Every USDC payment splits automatically into what you spend and what you keep.",
-    icon: <SplitIcon />,
+    art: <SplitArt />,
+    headline: "Every payment splits itself",
+    body: "Set it once. Each USDC payment divides into what you spend and what you keep — the moment it lands.",
   },
   {
+    art: <CooldownArt />,
     headline: "Savings wait before they leave",
-    body: "The part you keep takes up to 72 hours to withdraw, and only ever goes to an address you chose in advance. Cancel any time.",
-    icon: <CooldownIcon />,
+    body: "What you keep takes a waiting period to withdraw, and only ever goes to your own wallet. Cancel any time.",
   },
   {
-    headline: "Advance against your own savings",
-    body: "Need cash before the client pays? Borrow up to 50% of what you've kept, free for the first 30 days. No credit check, nobody to chase.",
-    icon: <AdvanceIcon />,
+    art: <AdvanceArt />,
+    headline: "Client paying late? Advance it",
+    body: "Borrow up to half of what you've kept, free for the first 30 days. Paid back from your next payment.",
   },
 ];
 
@@ -74,34 +134,33 @@ export default function OnboardingCarousel({ onDone }: { onDone: () => void }) {
     startXRef.current = e.clientX;
     setDragging(true);
     // Without capture, a fast swipe that outruns the finger's starting
-    // element stops delivering move events to this div — the same fix
-    // SlideToConfirm needs for the same reason.
+    // element stops delivering move events to this div.
     e.currentTarget.setPointerCapture(e.pointerId);
   }
 
   function onPointerMove(e: React.PointerEvent) {
     if (!dragging) return;
-    setDragX(e.clientX - startXRef.current);
+    // Rubber-band at the ends instead of sliding into empty space.
+    const dx = e.clientX - startXRef.current;
+    const atEdge = (i === 0 && dx > 0) || (last && dx < 0);
+    setDragX(atEdge ? dx * 0.25 : dx);
   }
 
   function onPointerUp() {
     if (!dragging) return;
     setDragging(false);
     const threshold = widthRef.current * 0.18;
-    if (dragX <= -threshold && i < SLIDES.length - 1) setI(i + 1);
+    if (dragX <= -threshold && !last) setI(i + 1);
     else if (dragX >= threshold && i > 0) setI(i - 1);
     setDragX(0);
   }
 
   return (
-    <main className="flex min-h-dvh flex-col p-8">
-      <div className="flex h-6 justify-end">
+    <FlowScreen className="px-0">
+      <div className="flex h-10 items-center justify-between px-6">
+        <BrandMark />
         {!last && (
-          <button
-            type="button"
-            onClick={onDone}
-            className="text-[13px] text-[#8CA497] hover:text-[#BFD8C9]"
-          >
+          <button type="button" onClick={onDone} className="text-[14px] font-semibold text-muted-foreground hover:text-foreground">
             Skip
           </button>
         )}
@@ -109,7 +168,7 @@ export default function OnboardingCarousel({ onDone }: { onDone: () => void }) {
 
       <div
         ref={trackRef}
-        className="flex flex-1 touch-pan-y select-none overflow-hidden"
+        className="flex flex-1 touch-pan-y overflow-hidden select-none"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -119,52 +178,60 @@ export default function OnboardingCarousel({ onDone }: { onDone: () => void }) {
           className="flex w-full shrink-0"
           style={{
             transform: `translateX(calc(${-i * 100}% + ${dragX}px))`,
-            transition: dragging ? "none" : "transform 0.25s ease-out",
+            transition: dragging ? "none" : "transform 0.4s cubic-bezier(0.22, 1, 0.36, 1)",
           }}
         >
-          {SLIDES.map((s) => (
+          {SLIDES.map((s, idx) => (
             <div
               key={s.headline}
-              className="flex w-full shrink-0 flex-col items-center justify-center gap-5 px-2 text-center"
+              aria-hidden={idx !== i}
+              className="flex w-full shrink-0 flex-col justify-end gap-8 px-6 pb-6"
             >
-              <div className="flex size-16 items-center justify-center rounded-2xl border border-[#1E3428] bg-[#12211A]">
-                {s.icon}
+              <div
+                className="flex flex-1 items-center justify-center transition-opacity duration-500"
+                style={{ opacity: idx === i ? 1 : 0.3 }}
+              >
+                {s.art}
               </div>
-              <p className="font-display text-[26px] font-bold">{s.headline}</p>
-              <p className="max-w-[36ch] text-[15px] leading-relaxed text-[#8CA497]">{s.body}</p>
+              <div className="flex flex-col gap-3">
+                <FlowTitle>{s.headline}</FlowTitle>
+                <FlowBody className="max-w-[34ch]">{s.body}</FlowBody>
+              </div>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="flex flex-col items-center gap-5 pb-4">
-        <div className="flex gap-2">
-          {SLIDES.map((s, idx) => (
-            <button
-              key={s.headline}
-              type="button"
-              onClick={() => setI(idx)}
-              aria-label={`Go to slide ${idx + 1}`}
-              className={
-                "h-1.5 rounded-full transition-all " +
-                (idx === i ? "w-6 bg-[#62E6A0]" : "w-1.5 bg-[#2C4A3B]")
-              }
-            />
-          ))}
-        </div>
-
+      <div className="flex flex-col gap-6 px-6">
         {last ? (
-          <SlideToConfirm label="Slide to get started" onConfirm={onDone} />
+          <SlideToConfirm label="Get started" onConfirm={onDone} />
         ) : (
-          <button
-            type="button"
-            onClick={() => setI(i + 1)}
-            className="w-full max-w-[320px] rounded-full bg-gradient-to-r from-[#16B862] to-[#62E6A0] py-3.5 text-[15px] font-semibold text-[#03170C]"
-          >
-            Next
-          </button>
+          <div className="flex items-center justify-between">
+            <div className="flex gap-2">
+              {SLIDES.map((s, idx) => (
+                <button
+                  key={s.headline}
+                  type="button"
+                  onClick={() => setI(idx)}
+                  aria-label={`Go to slide ${idx + 1}`}
+                  className={cn(
+                    "h-2 rounded-full transition-all duration-300",
+                    idx === i ? "w-7 bg-primary" : "w-2 bg-secondary"
+                  )}
+                />
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => setI(i + 1)}
+              aria-label="Next"
+              className="flex size-16 items-center justify-center rounded-full bg-gradient-to-br from-accent to-primary text-primary-foreground shadow-brand transition-transform active:scale-90"
+            >
+              <ArrowRight className="size-6" strokeWidth={2.5} />
+            </button>
+          </div>
         )}
       </div>
-    </main>
+    </FlowScreen>
   );
 }

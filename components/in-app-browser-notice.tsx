@@ -1,34 +1,41 @@
 "use client";
 
-function Logo() {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src="/logo-128.png" alt="" width={40} height={40} className="block" />
-  );
-}
+import { Compass, MoreHorizontal } from "lucide-react";
+import { FlowScreen, IconOrb, FlowTitle, FlowBody, BrandMark } from "./app/flow";
+import { Button } from "./ui/button";
 
 export default function InAppBrowserNotice({ onContinue }: { onContinue: () => void }) {
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 p-8 text-center">
-      <div className="flex flex-col items-center gap-3">
-        <Logo />
-        <p className="font-display text-[26px] font-bold">Open in your browser</p>
-        <p className="max-w-[38ch] text-[15px] leading-relaxed text-[#8CA497]">
-          This looks like it&rsquo;s open inside another app. Passkeys usually
-          don&rsquo;t work there. Look for <b className="text-[#EAF5EF]">⋯</b> or
-          a share icon in this screen&rsquo;s own toolbar, then{" "}
-          <b className="text-[#EAF5EF]">Open in Safari</b> or{" "}
-          <b className="text-[#EAF5EF]">Open in Chrome</b>.
-        </p>
+    <FlowScreen glow="warning">
+      <BrandMark />
+      <div className="flex flex-1 flex-col justify-center gap-8">
+        <IconOrb tone="warning">
+          <Compass className="size-11" strokeWidth={1.75} />
+        </IconOrb>
+        <div className="flex flex-col gap-3">
+          <FlowTitle>Open in your browser</FlowTitle>
+          <FlowBody>
+            This looks like it&rsquo;s open inside another app, where passkeys usually don&rsquo;t work.
+          </FlowBody>
+        </div>
+        <ol className="flex flex-col gap-3">
+          <li className="flex items-center gap-3 rounded-[18px] bg-card p-4 ring-1 ring-hairline">
+            <span className="flex size-8 items-center justify-center rounded-full bg-surface-2 text-[13px] font-bold">1</span>
+            <span className="flex-1 text-[14px]">
+              Tap <MoreHorizontal className="mx-0.5 inline size-4 align-[-3px]" /> or the share icon in this screen&rsquo;s toolbar
+            </span>
+          </li>
+          <li className="flex items-center gap-3 rounded-[18px] bg-card p-4 ring-1 ring-hairline">
+            <span className="flex size-8 items-center justify-center rounded-full bg-surface-2 text-[13px] font-bold">2</span>
+            <span className="flex-1 text-[14px]">
+              Choose <b>Open in Safari</b> or <b>Open in Chrome</b>
+            </span>
+          </li>
+        </ol>
       </div>
-
-      <button
-        type="button"
-        onClick={onContinue}
-        className="text-[13px] text-[#8CA497] underline decoration-[#2C4A3B] underline-offset-4 hover:text-[#BFD8C9]"
-      >
+      <Button variant="ghost" size="sm" onClick={onContinue} className="self-center">
         Continue anyway
-      </button>
-    </main>
+      </Button>
+    </FlowScreen>
   );
 }

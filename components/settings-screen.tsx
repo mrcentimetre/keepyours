@@ -1,43 +1,49 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Check, Copy, Fingerprint, Globe, PieChart, ShieldAlert, Timer, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import { getVaultSettings, DEFAULT_SETTINGS, type VaultSettings } from "@/lib/vault-settings";
-import { CopyIcon } from "./icons";
-import { Card } from "./ui/card";
+import { formatCooldown, shorten } from "@/lib/format";
+import { Screen, ScreenHeader, SectionLabel, WalletAvatar } from "./app/screen";
+import { Card, CardRows } from "./ui/card";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
 import { Skeleton } from "./ui/skeleton";
 
-function shorten(address: string): string {
-  return `${address.slice(0, 6)}…${address.slice(-4)}`;
-}
-
-function formatCooldown(seconds: number): string {
-  const hours = seconds / 3600;
-  if (hours < 24) return `${hours} hours`;
-  return `${Math.round(hours / 24)} days`;
-}
-
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function Row({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between border-b border-border py-3.5 last:border-b-0">
-      <span className="text-[13px] text-muted-foreground">{label}</span>
-      <span className="text-[14px] text-foreground">{value}</span>
+    <div className="flex items-center gap-3 px-4 py-3.5">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-muted-foreground">
+        {icon}
+      </span>
+      <span className="flex-1 text-[14px]">{label}</span>
+      <span className="text-right text-[14px] text-muted-foreground">{value}</span>
     </div>
+  );
+}
+
+function Group({ label, children, note }: { label: string; children: React.ReactNode; note?: string }) {
+  return (
+    <section className="flex flex-col gap-2">
+      <SectionLabel className="px-1">{label}</SectionLabel>
+      <Card>
+        <CardRows>{children}</CardRows>
+      </Card>
+      {note && <p className="px-1 text-[12px] leading-relaxed text-muted-foreground">{note}</p>}
+    </section>
   );
 }
 
 function SettingsSkeleton() {
   return (
-    <main className="flex min-h-dvh flex-col gap-8 p-6 pb-10">
-      <Skeleton className="h-7 w-28" />
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="flex flex-col gap-2">
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-28 w-full rounded-2xl" />
-        </div>
-      ))}
-    </main>
+    <Screen>
+      <Skeleton className="h-8 w-32" />
+      <Skeleton className="h-[88px]" />
+      <Skeleton className="h-[150px]" />
+      <Skeleton className="h-[110px]" />
+    </Screen>
   );
 }
 
@@ -55,6 +61,8 @@ export default function SettingsScreen() {
 
   if (!mounted) return <SettingsSkeleton />;
 
+  const keepPct = Math.round(settings.keepBps / 100);
+
   async function copyAddress() {
     if (!address) return;
     try {
@@ -68,47 +76,44 @@ export default function SettingsScreen() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col gap-8 p-6 pb-10 duration-500 animate-in fade-in slide-in-from-bottom-2">
-      <h1 className="font-display text-[22px] font-bold">Settings</h1>
+    <Screen>
+      <ScreenHeader title="Settings" />
 
-      <section className="flex flex-col gap-1">
-        <h2 className="mb-2 text-[13px] text-muted-foreground">Wallet</h2>
-        <Card className="px-4">
-          <div className="flex items-center justify-between border-b border-border py-3.5">
-            <span className="text-[13px] text-muted-foreground">Address</span>
-            <button
-              type="button"
-              onClick={copyAddress}
-              disabled={!address}
-              className="flex items-center gap-1.5 font-mono text-[13px] text-foreground disabled:opacity-50"
-            >
-              {address ? (copied ? "Copied" : shorten(address)) : "Not connected"}
-              {address && <CopyIcon />}
-            </button>
-          </div>
-          <Row label="Signed in with" value="Passkey on this device" />
-        </Card>
-      </section>
+      <Card className="flex items-center gap-4 p-4">
+        <WalletAvatar address={address} size={52} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[15px] font-semibold">Your wallet</p>
+          <p className="truncate font-mono text-[13px] text-muted-foreground">
+            {address ? shorten(address) : "Not connected"}
+          </p>
+        </div>
+        {address && (
+          <Button variant="secondary" size="icon" onClick={copyAddress} aria-label="Copy address">
+            {copied ? <Check className="text-primary" /> : <Copy />}
+          </Button>
+        )}
+      </Card>
 
-      <section className="flex flex-col gap-1">
-        <h2 className="mb-2 text-[13px] text-muted-foreground">Vault</h2>
-        <Card className="px-4">
-          <Row label="Keep" value={`${Math.round(settings.keepBps / 100)}%`} />
-          <Row label="Spend" value={`${100 - Math.round(settings.keepBps / 100)}%`} />
-          <Row label="Waiting period" value={formatCooldown(settings.cooldownSeconds)} />
-        </Card>
-        <p className="mt-2 text-[12px] text-muted-foreground">
-          Changing these after setup isn&rsquo;t built yet — coming in a future update.
-        </p>
-      </section>
+      <Group label="Vault" note="Changing these after setup isn't built yet — it's coming in a later update.">
+        <Row icon={<PieChart className="size-[18px]" />} label="Split" value={`Spend ${100 - keepPct}% · Keep ${keepPct}%`} />
+        <Row icon={<Timer className="size-[18px]" />} label="Waiting period" value={formatCooldown(settings.cooldownSeconds)} />
+      </Group>
 
-      <section className="flex flex-col gap-1">
-        <h2 className="mb-2 text-[13px] text-muted-foreground">About</h2>
-        <Card className="px-4">
-          <Row label="Network" value="Arbitrum Sepolia (testnet)" />
-          <Row label="Status" value="Unaudited" />
-        </Card>
-      </section>
-    </main>
+      <Group label="Security">
+        <Row icon={<Fingerprint className="size-[18px]" />} label="Sign-in" value="Passkey on this device" />
+        <Row icon={<Wallet className="size-[18px]" />} label="Custody" value="Only you can move funds" />
+      </Group>
+
+      <Group label="About">
+        <Row icon={<Globe className="size-[18px]" />} label="Network" value="Arbitrum Sepolia" />
+        <Row
+          icon={<ShieldAlert className="size-[18px]" />}
+          label="Contracts"
+          value={<Badge variant="warning">Unaudited</Badge>}
+        />
+      </Group>
+
+      <p className="pt-2 text-center text-[12px] text-muted-foreground">Keep Yours · Get paid. Keep yours.</p>
+    </Screen>
   );
 }
