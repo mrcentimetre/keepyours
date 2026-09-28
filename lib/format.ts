@@ -49,6 +49,10 @@ export function formatCooldownAdj(seconds: number): string {
   return hours % 24 === 0 ? `${hours / 24}-day` : `${hours}-hour`;
 }
 
+export function formatShortDate(at: number): string {
+  return new Date(at).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 export function formatDateTime(at: number): string {
   return new Date(at).toLocaleString("en-US", {
     weekday: "short",

@@ -15,9 +15,8 @@ import {
   FEE_TIERS,
   type Advance,
 } from "@/lib/mock-advance";
-import { formatUsdc } from "@/lib/format";
+import { formatShortDate, formatUsdc } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import AmountKeypad, { AmountDisplay, AmountPresets, type AmountPreset } from "./amount-keypad";
 import { Screen, ScreenHeader, Money, SectionLabel } from "./app/screen";
 import SlideToConfirm from "./slide-to-confirm";
 import { Card, CardRows } from "./ui/card";
@@ -92,7 +91,9 @@ export default function AdvanceScreen() {
   const [mounted, setMounted] = useState(false);
   const [balance, setBalance] = useState(0);
   const [advance, setAdvance] = useState<Advance | null>(null);
-  const [amount, setAmount] = useState("");
+  // A number, not the keypad's digit string: an advance is picked on a
+  // slider within a known limit, not typed.
+  const [amount, setAmount] = useState(0);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
 
@@ -122,25 +123,16 @@ export default function AdvanceScreen() {
   if (!mounted) return <AdvanceSkeleton />;
 
   const max = getMaxAdvance();
-  const value = Number(amount);
-  const overMax = value > max;
-  const amountValid = Number.isFinite(value) && value > 0 && !overMax;
-
-  const presets: AmountPreset[] =
-    max > 0
-      ? [
-          { label: "25%", value: round2(max * 0.25) },
-          { label: "50%", value: round2(max * 0.5) },
-          { label: "75%", value: round2(max * 0.75) },
-          { label: "Max", value: round2(max) },
-        ]
-      : [];
+  const value = Math.min(amount, max);
+  const amountValid = value > 0;
+  // Round dollar amounts under the limit, then the limit itself.
+  const picks = [...[10, 25, 50, 100].filter((n) => n < max), round2(max)].slice(-4);
 
   function borrow() {
     if (!amountValid) return;
     requestAdvance(value);
     setTimeout(() => {
-      setAmount("");
+      setAmount(0);
       setReviewOpen(false);
       refresh();
       toast.success(`$${formatUsdc(value)} is on its way to your spending balance`);
@@ -206,48 +198,127 @@ export default function AdvanceScreen() {
     <Screen className="gap-5">
       <ScreenHeader title="Advance" subtitle="Borrow against your own savings" />
 
-      <Card className="relative overflow-hidden p-5">
-        <span aria-hidden="true" className="absolute -top-10 -right-10 size-32 rounded-full bg-primary/20 blur-3xl" />
-        <div className="flex items-start justify-between">
-          <div>
-            <SectionLabel>Available now</SectionLabel>
-            <Money value={max} className="mt-1.5 block text-[28px] leading-none font-semibold" centsClassName="text-[20px]" />
+      {/* The limit as a card you hold — a credit line, not a form field. */}
+      <div
+        className="relative aspect-[1.7] overflow-hidden rounded-[26px] p-5 text-white shadow-float ring-1 ring-white/10"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(6,14,10,0.2) 0%, rgba(6,14,10,0.55) 100%), url(/brand/contour-banner.jpg) 75% 50% / cover no-repeat, #0a2e1e",
+        }}
+      >
+        <div className="flex h-full flex-col justify-between">
+          <div className="flex items-start justify-between">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[11px] font-bold tracking-[0.08em] uppercase ring-1 ring-white/20 backdrop-blur-md">
+              <Zap className="size-3.5" /> Advance line
+            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-128.png" alt="" width={30} height={30} />
           </div>
-          <span className="flex size-11 items-center justify-center rounded-full bg-primary/15 text-primary">
-            <Zap className="size-5" />
-          </span>
+          <div>
+            <p className="text-[11px] font-bold tracking-[0.12em] text-white/65 uppercase">Available now</p>
+            <Money value={max} className="mt-1 block text-[34px] leading-none font-semibold" centsClassName="text-[22px]" />
+            <p className="mt-2 text-[12px] text-white/70">
+              Half of your ${formatUsdc(balance)} savings · paid from the advance pool
+            </p>
+          </div>
         </div>
-        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-surface-2">
-          <div className="h-full w-1/2 rounded-full bg-gradient-to-r from-primary to-accent" />
-        </div>
-        <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
-          50% of ${formatUsdc(balance)} savings · from the advance pool, never other users&apos; savings
-        </p>
-      </Card>
-
-      <div className="flex flex-col items-center gap-1 py-1">
-        <AmountDisplay value={amount} invalid={overMax} />
-        <p className={"flex items-center gap-1.5 text-[12.5px] " + (overMax ? "text-destructive" : "text-muted-foreground")}>
-          {overMax ? (
-            <>Up to ${formatUsdc(max)} right now</>
-          ) : (
-            <>
-              <BadgeCheck className="size-3.5 text-primary" />
-              Free for the first 30 days
-            </>
-          )}
-        </p>
       </div>
 
-      <AmountPresets presets={presets} value={amount} onPick={setAmount} />
+      {max <= 0 ? (
+        <Card className="flex flex-col items-center gap-3 px-6 py-8 text-center">
+          <span className="flex size-12 items-center justify-center rounded-full bg-surface-2 text-muted-foreground">
+            <Zap className="size-5" />
+          </span>
+          <p className="text-[13px] leading-relaxed text-muted-foreground">
+            Advances are backed by your savings. Once you&apos;ve kept some, you can borrow up to half of it here.
+          </p>
+        </Card>
+      ) : (
+        <>
+          <Card className="p-5">
+            <div className="flex items-baseline justify-between">
+              <SectionLabel>How much</SectionLabel>
+              <span className="text-[12px] text-muted-foreground">up to ${formatUsdc(max)}</span>
+            </div>
+            <Money
+              value={value}
+              className="mt-2 block text-center text-[44px] leading-none font-semibold"
+              centsClassName="text-[28px]"
+            />
+            <input
+              type="range"
+              min={0}
+              max={max}
+              step={1}
+              value={value}
+              onChange={(e) => setAmount(Number(e.target.value))}
+              aria-label="Advance amount"
+              aria-valuetext={`${formatUsdc(value)} dollars`}
+              className="ky-fill mt-5 w-full cursor-pointer"
+              style={{ "--fill": `${max > 0 ? (value / max) * 100 : 0}%` } as React.CSSProperties}
+            />
+            <div className="mt-3 grid grid-cols-4 gap-2">
+              {picks.map((p, i) => {
+                const isMax = i === picks.length - 1;
+                const active = Math.abs(value - p) < 0.005;
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setAmount(p)}
+                    className={cn(
+                      "h-10 rounded-xl text-[13px] font-semibold transition-all active:scale-95",
+                      active ? "bg-primary text-primary-foreground" : "bg-surface-2 text-foreground/85 hover:bg-secondary"
+                    )}
+                  >
+                    {isMax ? "Max" : `$${p}`}
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
 
-      <AmountKeypad
-        value={amount}
-        onChange={setAmount}
-        onConfirm={() => amountValid && setReviewOpen(true)}
-        confirmDisabled={!amountValid}
-        confirmLabel="Review advance"
-      />
+          {/* What it costs, as dates — the thing to know before borrowing. */}
+          <Card className="p-5">
+            <SectionLabel className="mb-4">If you don&apos;t get paid for a while</SectionLabel>
+            <ol className="relative flex flex-col gap-4 pl-6">
+              <span aria-hidden="true" className="absolute top-2 bottom-2 left-[7px] w-0.5 rounded-full bg-surface-2" />
+              {[
+                { dot: "bg-primary", title: "Free", when: `until ${formatShortDate(now + 30 * DAY_MS)}`, cost: "$0.00" },
+                {
+                  dot: "bg-warning/70",
+                  title: "1.5% fee",
+                  when: `until ${formatShortDate(now + 60 * DAY_MS)}`,
+                  cost: `$${formatUsdc(round2(value * 0.015))}`,
+                },
+                {
+                  dot: "bg-warning",
+                  title: "3% fee",
+                  when: `until ${formatShortDate(now + 90 * DAY_MS)}`,
+                  cost: `$${formatUsdc(round2(value * 0.03))}`,
+                },
+              ].map((s) => (
+                <li key={s.title} className="relative flex items-center justify-between">
+                  <span className={cn("absolute top-1/2 -left-6 size-4 -translate-y-1/2 rounded-full ring-4 ring-card", s.dot)} />
+                  <span>
+                    <span className="block text-[14px] font-semibold">{s.title}</span>
+                    <span className="block text-[12px] text-muted-foreground">{s.when}</span>
+                  </span>
+                  <span className="font-mono text-[14px] text-muted-foreground tabular-nums">{s.cost}</span>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-4 flex items-center gap-1.5 text-[12.5px] text-muted-foreground">
+              <BadgeCheck className="size-4 shrink-0 text-primary" />
+              Your next payment repays it first, before the split.
+            </p>
+          </Card>
+
+          <Button onClick={() => amountValid && setReviewOpen(true)} disabled={!amountValid} className="w-full">
+            {amountValid ? `Borrow $${formatUsdc(value)}` : "Choose an amount"}
+          </Button>
+        </>
+      )}
 
       <Sheet open={reviewOpen} onOpenChange={setReviewOpen}>
         <SheetContent title="Review advance">
