@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { getKeptBalance } from "@/lib/mock-activity";
 import {
   getOpenAdvance,
@@ -14,9 +13,14 @@ import {
   FEE_TIERS,
   type Advance,
 } from "@/lib/mock-advance";
+import AmountKeypad, { type AmountPreset } from "./amount-keypad";
 
 function formatUsdc(n: number): string {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100;
 }
 
 function daysElapsed(takenAt: number, now: number): number {
@@ -60,6 +64,16 @@ export default function AdvanceScreen() {
   const value = Number(amount);
   const amountValid = Number.isFinite(value) && value > 0 && value <= max;
 
+  const presets: AmountPreset[] =
+    max > 0
+      ? [
+          { label: "25%", value: round2(max * 0.25) },
+          { label: "50%", value: round2(max * 0.5) },
+          { label: "75%", value: round2(max * 0.75) },
+          { label: "Max", value: round2(max) },
+        ]
+      : [];
+
   function handleConfirm() {
     if (!amountValid) return;
     requestAdvance(value);
@@ -74,42 +88,25 @@ export default function AdvanceScreen() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col gap-8 p-6 pb-10">
-      <header className="flex items-center gap-3">
-        <Link href="/app/home" className="text-[14px] text-[#8CA497] hover:text-[#BFD8C9]">
-          ← Home
-        </Link>
-      </header>
-
+    <main className="flex min-h-dvh flex-col gap-6 p-6 pb-10">
       <h1 className="font-display text-[22px] font-bold">Advance</h1>
 
       {!advance ? (
         step === "amount" ? (
           <section className="flex flex-col gap-5">
-            <div className="flex flex-col items-center gap-1 rounded-[24px] border border-[#1E3428] bg-[#12211A] p-6 text-center">
-              <p className="text-[13px] text-[#8CA497]">Up to 50% of savings</p>
-              <p className="font-mono text-[32px] font-semibold text-[#EAF5EF]">
-                ${formatUsdc(max)}
-              </p>
-              <p className="text-[12px] text-[#8CA497]">
-                from the advance pool, never other users&apos; savings
-              </p>
-            </div>
+            <p className="text-center text-[13px] text-[#8CA497]">
+              Up to 50% of savings:{" "}
+              <span className="text-[#EAF5EF]">${formatUsdc(max)}</span>
+              <br />
+              from the advance pool, never other users&apos; savings
+            </p>
 
-            <label className="flex flex-col gap-2">
-              <span className="text-[13px] text-[#8CA497]">Amount (USDC)</span>
-              <input
-                type="number"
-                inputMode="decimal"
-                min={0}
-                max={max}
-                step="0.01"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-                className="rounded-[16px] border border-[#1E3428] bg-[#12211A] px-4 py-3 font-mono text-[18px] text-[#EAF5EF] outline-none focus:border-[#2C4A3B]"
-              />
-            </label>
+            <div className="flex items-center justify-center gap-1 py-2 text-center">
+              <p className="font-mono text-[40px] font-semibold text-[#EAF5EF]">
+                ${amount || "0"}
+              </p>
+              <span className="h-[34px] w-[2px] animate-pulse bg-[#62E6A0]" aria-hidden="true" />
+            </div>
 
             <div className="flex flex-col gap-2 rounded-[18px] border border-[#1E3428] p-4">
               <p className="text-[12px] text-[#8CA497]">Fee if not repaid before your next payment</p>
@@ -123,14 +120,14 @@ export default function AdvanceScreen() {
               ))}
             </div>
 
-            <button
-              type="button"
-              onClick={() => amountValid && setStep("confirm")}
-              disabled={max <= 0 || !amountValid}
-              className="rounded-full bg-gradient-to-r from-[#16B862] to-[#62E6A0] py-3.5 text-[15px] font-semibold text-[#03170C] disabled:opacity-40"
-            >
-              Review advance
-            </button>
+            <AmountKeypad
+              value={amount}
+              onChange={setAmount}
+              presets={presets}
+              onConfirm={() => amountValid && setStep("confirm")}
+              confirmDisabled={max <= 0 || !amountValid}
+              confirmLabel="Review advance"
+            />
           </section>
         ) : (
           <section className="flex flex-col gap-5">
