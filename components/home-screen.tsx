@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowDownLeft,
@@ -11,9 +11,7 @@ import {
   Lock,
   Plus,
   QrCode as QrIcon,
-  Search,
   Timer,
-  X,
   Zap,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -33,7 +31,6 @@ import { cn } from "@/lib/utils";
 import { Money, SectionLabel, WalletAvatar } from "./app/screen";
 import { Card, CardRows } from "./ui/card";
 import { Button } from "./ui/button";
-import { Input } from "./ui/input";
 import { Skeleton } from "./ui/skeleton";
 import { Sheet, SheetContent } from "./ui/sheet";
 import GetPaidSheet from "./get-paid-sheet";
@@ -202,9 +199,6 @@ export default function HomeScreen() {
   const [now, setNow] = useState(Date.now());
   const [getPaidOpen, setGetPaidOpen] = useState(false);
   const [alertsOpen, setAlertsOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const activityRef = useRef<HTMLElement>(null);
 
   function refresh() {
     setPayments(getPayments());
@@ -234,13 +228,6 @@ export default function HomeScreen() {
   const kept = getKeptBalance();
   const spent = getSpentTotal();
 
-  const q = query.trim();
-  const shown = q
-    ? payments.filter((p) =>
-        [p.totalUsdc, p.keptUsdc, p.spentUsdc].some((n) => formatUsdc(n).includes(q))
-      )
-    : payments;
-
   async function copyAddress() {
     if (!address) return;
     try {
@@ -255,12 +242,6 @@ export default function HomeScreen() {
     const p = addSimulatedPayment(100, settings.keepBps);
     refresh();
     toast.success(`$100 test payment split: $${formatUsdc(p.spentUsdc)} to spend, $${formatUsdc(p.keptUsdc)} kept`);
-  }
-
-  function toggleSearch() {
-    setSearchOpen((v) => !v);
-    setQuery("");
-    activityRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   const alerts = [
@@ -280,21 +261,9 @@ export default function HomeScreen() {
     <main className="flex min-h-dvh flex-col duration-300 animate-in fade-in">
       {/* ── Hero ─────────────────────────────────────────────── */}
       <section
-        className="relative overflow-hidden rounded-b-[32px] px-5 pt-[calc(env(safe-area-inset-top)+18px)] pb-7 text-white"
+        className="relative overflow-hidden rounded-b-[32px] px-5 pt-[calc(env(safe-area-inset-top)+18px)] pb-7 text-white shadow-float ring-1 ring-white/[0.07]"
         style={{ background: "var(--hero)" }}
       >
-        {/* Dot grid whispered into the top-right corner. */}
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 opacity-[0.14]"
-          style={{
-            backgroundImage: "radial-gradient(rgba(255,255,255,0.9) 1px, transparent 1.4px)",
-            backgroundSize: "16px 16px",
-            maskImage: "radial-gradient(90% 70% at 100% 0%, #000 0%, transparent 70%)",
-            WebkitMaskImage: "radial-gradient(90% 70% at 100% 0%, #000 0%, transparent 70%)",
-          }}
-        />
-
         <div className="relative flex items-center justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <WalletAvatar address={address} size={44} />
@@ -306,9 +275,6 @@ export default function HomeScreen() {
             </div>
           </div>
           <div className="flex gap-2">
-            <Button variant="glass" size="icon" className="size-11" onClick={toggleSearch} aria-label="Search activity">
-              <Search />
-            </Button>
             <Button
               variant="glass"
               size="icon"
@@ -377,7 +343,7 @@ export default function HomeScreen() {
         </div>
 
         {/* ── Activity ──────────────────────────────────────── */}
-        <section ref={activityRef} className="flex scroll-mt-4 flex-col gap-3">
+        <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-[18px] font-extrabold tracking-[-0.02em]">Activity</h2>
             <Button variant="secondary" size="sm" onClick={simulatePayment}>
@@ -385,31 +351,6 @@ export default function HomeScreen() {
               Test payment
             </Button>
           </div>
-
-          {searchOpen && (
-            <div className="relative duration-200 animate-in fade-in slide-in-from-top-1">
-              <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                autoFocus
-                inputMode="decimal"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search by amount"
-                className="pl-11"
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchOpen(false);
-                  setQuery("");
-                }}
-                aria-label="Close search"
-                className="absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1 text-muted-foreground"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-          )}
 
           {payments.length === 0 ? (
             <Card className="flex flex-col items-center gap-3 px-6 py-9 text-center">
@@ -426,14 +367,10 @@ export default function HomeScreen() {
                 Show my QR
               </Button>
             </Card>
-          ) : shown.length === 0 ? (
-            <Card className="px-6 py-8 text-center text-[13px] text-muted-foreground">
-              No payment matches “{q}”.
-            </Card>
           ) : (
             <Card>
               <CardRows>
-                {shown.map((p) => (
+                {payments.map((p) => (
                   <div key={p.id} className="flex items-center gap-3 px-4 py-3.5">
                     <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
                       <ArrowDownLeft className="size-5" aria-hidden="true" />

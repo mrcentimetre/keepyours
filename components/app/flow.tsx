@@ -5,7 +5,22 @@ import { cn } from "@/lib/utils";
  * setup, notices) — a soft green light from the top, so they don't sit on
  * flat black. Fixed, so it never scrolls away or runs out. */
 function Glow({ tone = "brand" }: { tone?: "brand" | "warning" }) {
-  const c = tone === "warning" ? "244,181,69" : "22,184,98";
+  if (tone === "brand") {
+    // The brand's contour-line texture, fading out down the screen so the
+    // text and buttons below sit on plain Night.
+    return (
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-x-0 top-0 mx-auto h-[62dvh] max-w-[640px] bg-cover bg-[position:50%_30%] opacity-80"
+        style={{
+          backgroundImage: "url(/brand/contour-square.jpg)",
+          maskImage: "linear-gradient(180deg, #000 0%, rgba(0,0,0,0.6) 45%, transparent 100%)",
+          WebkitMaskImage: "linear-gradient(180deg, #000 0%, rgba(0,0,0,0.6) 45%, transparent 100%)",
+        }}
+      />
+    );
+  }
+  const c = "244,181,69";
   return (
     <div
       aria-hidden="true"

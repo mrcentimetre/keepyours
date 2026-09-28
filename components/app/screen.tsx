@@ -1,4 +1,5 @@
 import * as React from "react";
+import BoringAvatar from "boring-avatars";
 import { cn } from "@/lib/utils";
 import { splitUsdc } from "@/lib/format";
 
@@ -70,23 +71,26 @@ function Money({
   );
 }
 
-/** A deterministic gradient avatar from the wallet address — the same
- * address always gets the same colours, kept in the brand's green-teal
- * range so it never clashes. No initials: there's no name to take them from. */
+// Brand greens plus a teal for variety — no amber (that means "waiting")
+// or red ("blocked") in something purely decorative.
+const AVATAR_COLORS = ["#0d4429", "#16b862", "#62e6a0", "#2cc7b0", "#eaf5ef"];
+
+/**
+ * The wallet's picture. Until a wallet has something of its own to show
+ * (an NFT, say), it gets a generated "boring avatar" — the same address
+ * always draws the same one. Generated locally by the boring-avatars
+ * package, not boringavatars.com's image URL: that would send every
+ * user's wallet address to a third-party server on every screen load.
+ */
 function WalletAvatar({ address, size = 40 }: { address: string | null; size?: number }) {
-  const seed = address ? parseInt(address.slice(2, 10), 16) || 0 : 0;
-  const h1 = 135 + (seed % 30);
-  const h2 = 145 + ((seed >> 8) % 30);
   return (
     <span
       aria-hidden="true"
-      className="inline-block shrink-0 rounded-full ring-2 ring-white/20"
-      style={{
-        width: size,
-        height: size,
-        background: `conic-gradient(from ${seed % 360}deg, hsl(${h1} 70% 45%), hsl(${h2} 75% 62%), hsl(${h1} 70% 45%))`,
-      }}
-    />
+      className="inline-block shrink-0 overflow-hidden rounded-full ring-2 ring-white/20"
+      style={{ width: size, height: size }}
+    >
+      <BoringAvatar name={address ?? "keep-yours"} variant="beam" colors={AVATAR_COLORS} size={size} />
+    </span>
   );
 }
 
