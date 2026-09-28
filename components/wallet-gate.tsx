@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { usePasskeyWallet, hasExistingPasskey } from "@/hooks/use-passkey-wallet";
+import { hasCompletedSetup } from "@/lib/vault-settings";
 import SecondDeviceNotice from "./second-device-notice";
 
 const SEEN_NOTICE_KEY = "ky_seen_second_device_notice";
@@ -13,8 +15,14 @@ function Logo() {
   );
 }
 
-function shorten(address: string): string {
-  return `${address.slice(0, 6)}…${address.slice(-4)}`;
+/** Past the wallet gate entirely: hand off to Setup (T3.1) on a fresh
+ * wallet, or straight to Home (T3.2) for one that's already configured. */
+function Redirecting() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace(hasCompletedSetup() ? "/app/home" : "/app/setup");
+  }, [router]);
+  return null;
 }
 
 export default function WalletGate() {
@@ -62,16 +70,7 @@ export default function WalletGate() {
   }
 
   if (status === "ready" && address) {
-    return (
-      <main className="flex min-h-dvh flex-col items-center justify-center gap-3 p-8 text-center">
-        <Logo />
-        <p className="font-display text-2xl font-bold">You&rsquo;re in</p>
-        <p className="font-mono text-sm text-[#62E6A0]">{shorten(address)}</p>
-        <p className="max-w-[42ch] text-sm text-[#8CA497]">
-          Setup, home, withdraw and advance screens land next. This is a placeholder.
-        </p>
-      </main>
-    );
+    return <Redirecting />;
   }
 
   return (
