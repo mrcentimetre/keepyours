@@ -17,7 +17,12 @@ export type WalletStatus = "idle" | "connecting" | "ready" | "error";
 
 export function hasExistingPasskey(): boolean {
   try {
-    return localStorage.getItem(HAS_PASSKEY_KEY) === "1";
+    // A cached address also counts: anyone who signed in before the flag
+    // was saved on unlock (see run() below) has one, and shouldn't be shown
+    // "Create your wallet" again.
+    return (
+      localStorage.getItem(HAS_PASSKEY_KEY) === "1" || localStorage.getItem(CACHED_ADDRESS_KEY) !== null
+    );
   } catch {
     return false;
   }
@@ -58,7 +63,11 @@ export function usePasskeyWallet() {
       setStatus("ready");
       setJustCreated(markCreated);
       try {
-        if (markCreated) localStorage.setItem(HAS_PASSKEY_KEY, "1");
+        // On ANY success, not just a fresh create: someone who signs in with
+        // an existing passkey ("I already have a passkey") is a returning user
+        // too. Only setting this on create meant their next launch showed
+        // "Create your wallet" again instead of "Welcome back".
+        localStorage.setItem(HAS_PASSKEY_KEY, "1");
         localStorage.setItem(CACHED_ADDRESS_KEY, result.address);
       } catch {
         // fine without persistence; just re-shows "create" next time
