@@ -1,20 +1,25 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { ArrowRight, Check, ChevronsRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-const HANDLE = 48; // px, handle diameter
+const HANDLE = 56; // px, handle diameter
+const INSET = 4; // px, track padding around the handle
 const CONFIRM_THRESHOLD = 0.82; // fraction of the track the handle must cross
 
-/** A drag-to-confirm slider, not a tap button — the deliberate motion is
- * the point (mirrors a native "slide to unlock"/"slide to pay" control).
- * Dragging short of the threshold snaps the handle back; nothing fires
- * until it's actually dragged across. */
+/** A drag-to-confirm control, not a tap button — the deliberate motion is
+ * the point (a native "slide to pay"). Dragging short of the threshold snaps
+ * back; nothing fires until it's actually dragged across. Enter/Space on the
+ * handle confirms too, for anyone who can't perform a drag. */
 export default function SlideToConfirm({
   label,
   onConfirm,
+  className,
 }: {
   label: string;
   onConfirm: () => void;
+  className?: string;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const maxXRef = useRef(0);
@@ -23,11 +28,21 @@ export default function SlideToConfirm({
   const [dragging, setDragging] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
 
+  function measure() {
+    const track = trackRef.current;
+    maxXRef.current = track ? Math.max(0, track.clientWidth - HANDLE - INSET * 2) : 0;
+  }
+
+  function finish() {
+    measure();
+    setDragX(maxXRef.current);
+    setConfirmed(true);
+    onConfirm();
+  }
+
   function onPointerDown(e: React.PointerEvent) {
     if (confirmed) return;
-    const track = trackRef.current;
-    if (!track) return;
-    maxXRef.current = Math.max(0, track.clientWidth - HANDLE - 8);
+    measure();
     startXRef.current = e.clientX - dragX;
     setDragging(true);
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -35,21 +50,14 @@ export default function SlideToConfirm({
 
   function onPointerMove(e: React.PointerEvent) {
     if (!dragging) return;
-    const x = Math.max(0, Math.min(maxXRef.current, e.clientX - startXRef.current));
-    setDragX(x);
+    setDragX(Math.max(0, Math.min(maxXRef.current, e.clientX - startXRef.current)));
   }
 
   function onPointerUp() {
     if (!dragging) return;
     setDragging(false);
-    const crossed = maxXRef.current > 0 && dragX >= maxXRef.current * CONFIRM_THRESHOLD;
-    if (crossed) {
-      setDragX(maxXRef.current);
-      setConfirmed(true);
-      onConfirm();
-    } else {
-      setDragX(0);
-    }
+    if (maxXRef.current > 0 && dragX >= maxXRef.current * CONFIRM_THRESHOLD) finish();
+    else setDragX(0);
   }
 
   const progress = maxXRef.current > 0 ? dragX / maxXRef.current : 0;
@@ -57,47 +65,55 @@ export default function SlideToConfirm({
   return (
     <div
       ref={trackRef}
-      className="relative h-14 w-full max-w-[320px] touch-none select-none rounded-full border border-[#1E3428] bg-[#12211A]"
+      // Inside a vaul sheet, a drag here would otherwise also drag the sheet.
+      data-vaul-no-drag=""
+      className={cn(
+        "relative h-16 w-full touch-none overflow-hidden rounded-full bg-surface-2 ring-1 ring-hairline select-none",
+        className
+      )}
     >
+      {/* Fill that follows the handle. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-[#16B862]/50 to-[#62E6A0]/50"
-        style={{ width: `${HANDLE / 2 + dragX}px` }}
+        className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-primary/30 to-accent/40"
+        style={{
+          width: `${HANDLE + INSET * 2 + dragX}px`,
+          transition: dragging ? "none" : "width 0.25s ease-out",
+        }}
       />
       <p
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 flex items-center justify-center text-[14px] font-semibold text-[#8CA497] transition-opacity"
-        style={{ opacity: 1 - progress }}
+        className="pointer-events-none absolute inset-0 flex items-center justify-center gap-1 pl-10 text-[15px] font-semibold text-foreground/80"
+        style={{ opacity: confirmed ? 0 : 1 - progress * 1.4 }}
       >
         {label}
+        <ChevronsRight className="size-4 animate-pulse text-muted-foreground" />
       </p>
       <div
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerUp}
-        role="slider"
+        role="button"
         aria-label={label}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(progress * 100)}
         tabIndex={0}
         onKeyDown={(e) => {
-          // Keyboard/a11y escape hatch — Enter or Space confirms directly,
-          // no drag required, for anyone who can't perform a pointer drag.
           if ((e.key === "Enter" || e.key === " ") && !confirmed) {
             e.preventDefault();
-            setDragX(maxXRef.current || 260);
-            setConfirmed(true);
-            onConfirm();
+            finish();
           }
         }}
-        className="absolute top-1 left-1 flex size-12 cursor-grab items-center justify-center rounded-full bg-gradient-to-r from-[#16B862] to-[#62E6A0] text-[#03170C] active:cursor-grabbing"
-        style={{ transform: `translateX(${dragX}px)`, transition: dragging ? "none" : "transform 0.2s ease-out" }}
+        className="absolute flex cursor-grab items-center justify-center rounded-full bg-gradient-to-br from-accent to-primary text-primary-foreground shadow-brand active:cursor-grabbing"
+        style={{
+          top: INSET,
+          left: INSET,
+          width: HANDLE,
+          height: HANDLE,
+          transform: `translateX(${dragX}px)`,
+          transition: dragging ? "none" : "transform 0.25s ease-out",
+        }}
       >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-          <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        {confirmed ? <Check className="size-6" strokeWidth={2.75} /> : <ArrowRight className="size-6" strokeWidth={2.5} />}
       </div>
     </div>
   );

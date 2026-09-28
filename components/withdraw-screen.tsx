@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ArrowDown, Lock, Timer } from "lucide-react";
+import { toast } from "sonner";
+import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import { getKeptBalance } from "@/lib/mock-activity";
+import { getVaultSettings, DEFAULT_SETTINGS } from "@/lib/vault-settings";
 import {
   getPendingWithdrawal,
   requestWithdrawal,
@@ -9,58 +13,60 @@ import {
   executeWithdrawal,
   type PendingWithdrawal,
 } from "@/lib/mock-withdrawal";
-import AmountKeypad, { type AmountPreset } from "./amount-keypad";
-import { Card } from "./ui/card";
+import { formatUsdc, formatCooldown, formatCooldownAdj, formatCountdown, formatDateTime, shorten } from "@/lib/format";
+import AmountKeypad, { AmountDisplay, AmountPresets, type AmountPreset } from "./amount-keypad";
+import { Screen, ScreenHeader, Money, WalletAvatar, SectionLabel } from "./app/screen";
+import CountdownRing from "./countdown-ring";
+import SlideToConfirm from "./slide-to-confirm";
+import { Card, CardRows } from "./ui/card";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
-
-function formatUsdc(n: number): string {
-  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+import { Sheet, SheetContent } from "./ui/sheet";
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-function formatCountdown(msRemaining: number): string {
-  const totalSeconds = Math.max(0, Math.floor(msRemaining / 1000));
-  const h = Math.floor(totalSeconds / 3600);
-  const m = Math.floor((totalSeconds % 3600) / 60);
-  const s = totalSeconds % 60;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(h)}:${pad(m)}:${pad(s)}`;
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-4 px-4 py-3.5 text-[14px]">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="text-right font-medium">{children}</span>
+    </div>
+  );
 }
 
 function WithdrawSkeleton() {
   return (
-    <main className="flex min-h-dvh flex-col gap-6 p-6 pb-10">
-      <Skeleton className="h-7 w-32" />
-      <Skeleton className="mx-auto h-4 w-40" />
-      <Skeleton className="mx-auto h-12 w-32" />
-      <div className="flex gap-2">
-        {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-8 w-16 rounded-full" />
-        ))}
-      </div>
-      <Skeleton className="h-64 w-full rounded-2xl" />
-    </main>
+    <Screen>
+      <Skeleton className="h-8 w-36" />
+      <Skeleton className="h-[132px]" />
+      <Skeleton className="mx-auto h-14 w-44" />
+      <Skeleton className="h-[270px]" />
+    </Screen>
   );
 }
 
 export default function WithdrawScreen() {
   const [mounted, setMounted] = useState(false);
   const [balance, setBalance] = useState(0);
+  const [address, setAddress] = useState<string | null>(null);
+  const [cooldownSeconds, setCooldownSeconds] = useState(DEFAULT_SETTINGS.cooldownSeconds);
   const [pending, setPending] = useState<PendingWithdrawal | null>(null);
   const [amount, setAmount] = useState("");
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   function refresh() {
     setBalance(getKeptBalance());
     setPending(getPendingWithdrawal());
+    setNow(Date.now());
   }
 
   useEffect(() => {
     setMounted(true);
+    setAddress(getCachedAddress());
+    setCooldownSeconds((getVaultSettings() ?? DEFAULT_SETTINGS).cooldownSeconds);
     refresh();
   }, []);
 
@@ -73,9 +79,9 @@ export default function WithdrawScreen() {
 
   if (!mounted) return <WithdrawSkeleton />;
 
-  const releaseReached = pending ? now >= pending.releaseAt : false;
   const value = Number(amount);
-  const amountValid = Number.isFinite(value) && value > 0 && value <= balance;
+  const overBalance = value > balance;
+  const amountValid = Number.isFinite(value) && value > 0 && !overBalance;
 
   const presets: AmountPreset[] =
     balance > 0
@@ -87,87 +93,171 @@ export default function WithdrawScreen() {
         ]
       : [];
 
-  function handleRequest() {
+  function start() {
     if (!amountValid) return;
     requestWithdrawal(value);
-    setAmount("");
-    refresh();
+    // Let the slide's check mark land before the sheet drops away — and only
+    // clear the amount then, or the sheet flashes "$0.00" on its way out.
+    setTimeout(() => {
+      setAmount("");
+      setReviewOpen(false);
+      refresh();
+      toast.success("Waiting period started");
+    }, 350);
   }
 
-  function handleCancel() {
+  function cancel() {
     cancelWithdrawal();
     refresh();
+    toast.success("Withdrawal cancelled. Your savings stay put.");
   }
 
-  function handleExecute() {
+  function send() {
+    const amt = pending?.amountUsdc ?? 0;
     executeWithdrawal();
     refresh();
+    toast.success(`Sent $${formatUsdc(amt)} to your wallet`);
   }
 
+  // ── Waiting ─────────────────────────────────────────────────
+  if (pending) {
+    const total = pending.releaseAt - pending.requestedAt;
+    const released = now >= pending.releaseAt;
+    const progress = total > 0 ? (now - pending.requestedAt) / total : 1;
+
+    return (
+      <Screen>
+        <ScreenHeader title="Withdraw" subtitle={released ? "Ready to send" : "Waiting period in progress"} />
+
+        <Card className="flex flex-col items-center px-5 py-7">
+          <CountdownRing progress={progress} color={released ? "var(--primary)" : "var(--warning)"}>
+            <SectionLabel>{released ? "Ready" : "Releases in"}</SectionLabel>
+            <p
+              className={
+                "mt-1 font-mono font-semibold tracking-[-0.03em] tabular-nums " +
+                (pending.releaseAt - now >= 86_400_000 ? "text-[25px] " : "text-[30px] ") +
+                (released ? "text-primary" : "text-warning")
+              }
+            >
+              {released ? "00:00:00" : formatCountdown(pending.releaseAt - now)}
+            </p>
+            <Money value={pending.amountUsdc} className="mt-1 text-[15px] text-muted-foreground" />
+          </CountdownRing>
+          <p className="mt-6 max-w-[34ch] text-center text-[13px] leading-relaxed text-muted-foreground">
+            {released
+              ? "The waiting period is over. Send it whenever you're ready."
+              : "An alert was sent. If this wasn't you, cancel — nothing leaves until the timer ends."}
+          </p>
+        </Card>
+
+        <Card>
+          <CardRows>
+            <Row label="Amount">
+              <Money value={pending.amountUsdc} />
+            </Row>
+            <Row label="To">
+              <span className="font-mono">{address ? shorten(address) : "Your wallet"}</span>
+            </Row>
+            <Row label="Requested">{formatDateTime(pending.requestedAt)}</Row>
+            <Row label="Releases">{formatDateTime(pending.releaseAt)}</Row>
+          </CardRows>
+        </Card>
+
+        {released ? (
+          <Button onClick={send} className="w-full">
+            Send to my wallet
+          </Button>
+        ) : (
+          <Button onClick={cancel} variant="destructive" className="w-full">
+            Cancel withdrawal
+          </Button>
+        )}
+      </Screen>
+    );
+  }
+
+  // ── Entry ───────────────────────────────────────────────────
   return (
-    <main className="flex min-h-dvh flex-col gap-6 p-6 pb-10 duration-500 animate-in fade-in slide-in-from-bottom-2">
-      <h1 className="font-display text-[22px] font-bold">Withdraw</h1>
+    <Screen className="gap-5">
+      <ScreenHeader title="Withdraw" subtitle="From savings, after a waiting period" />
 
-      {!pending ? (
-        <section className="flex flex-col gap-5">
-          <p className="text-center text-[13px] text-muted-foreground">
-            Available: <span className="text-foreground">${formatUsdc(balance)}</span>
-          </p>
-
-          <div className="flex items-center justify-center gap-1 py-2 text-center">
-            <p className="font-mono text-[40px] font-semibold text-foreground">${amount || "0"}</p>
-            <span className="h-[34px] w-[2px] animate-pulse bg-primary" aria-hidden="true" />
+      <Card className="relative">
+        <CardRows>
+          <div className="flex items-center gap-3 px-4 py-3.5">
+            <span className="flex size-10 items-center justify-center rounded-full bg-primary/15 text-primary">
+              <Lock className="size-[18px]" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[12px] text-muted-foreground">From</p>
+              <p className="text-[14px] font-semibold">Savings</p>
+            </div>
+            <div className="text-right">
+              <Money value={balance} className="text-[14px] font-semibold" />
+              <p className="text-[11.5px] text-muted-foreground">available</p>
+            </div>
           </div>
+          <div className="flex items-center gap-3 px-4 py-3.5">
+            <WalletAvatar address={address} size={40} />
+            <div className="min-w-0 flex-1">
+              <p className="text-[12px] text-muted-foreground">To</p>
+              <p className="text-[14px] font-semibold">Your wallet</p>
+            </div>
+            <p className="font-mono text-[13px] text-muted-foreground">{address ? shorten(address) : "—"}</p>
+          </div>
+        </CardRows>
+        <span className="absolute top-1/2 left-[24px] flex size-6 -translate-y-1/2 items-center justify-center rounded-full bg-card text-muted-foreground ring-1 ring-hairline">
+          <ArrowDown className="size-3.5" />
+        </span>
+      </Card>
 
-          <AmountKeypad
-            value={amount}
-            onChange={setAmount}
-            presets={presets}
-            onConfirm={handleRequest}
-            confirmDisabled={balance <= 0 || !amountValid}
-            confirmLabel="Request withdrawal"
-          />
-
-          <p className="text-center text-[12px] text-muted-foreground">
-            Starts the waiting period set up for this vault. You can cancel any time before it
-            ends, no penalty.
-          </p>
-        </section>
-      ) : (
-        <section className="flex flex-col items-center gap-5">
-          <Card className="flex w-full flex-col items-center gap-2 p-6 text-center">
-            <p className="text-[13px] text-muted-foreground">Withdrawing</p>
-            <p className="font-mono text-[32px] font-semibold text-foreground">
-              ${formatUsdc(pending.amountUsdc)}
-            </p>
-            <p className="text-[12px] text-muted-foreground">to your wallet address</p>
-          </Card>
-
-          <Card className="flex w-full flex-col items-center gap-2 border-warning/30 bg-warning/10 p-6 text-center">
-            <p className="text-[13px] text-warning">
-              {releaseReached ? "Waiting period over" : "Waiting period"}
-            </p>
-            <p className="font-mono text-[36px] font-semibold text-warning">
-              {releaseReached ? "00:00:00" : formatCountdown(pending.releaseAt - now)}
-            </p>
-            <p className="text-[12px] text-muted-foreground">
-              {releaseReached
-                ? "Ready to send."
-                : "An alert was sent. Cancel any time before it ends."}
-            </p>
-          </Card>
-
-          {releaseReached ? (
-            <Button onClick={handleExecute} className="w-full">
-              Send to my wallet
-            </Button>
+      <div className="flex flex-col items-center gap-1 py-1">
+        <AmountDisplay value={amount} invalid={overBalance} />
+        <p className={"flex items-center gap-1.5 text-[12.5px] " + (overBalance ? "text-destructive" : "text-muted-foreground")}>
+          {overBalance ? (
+            <>More than your savings (${formatUsdc(balance)})</>
           ) : (
-            <Button onClick={handleCancel} variant="destructive" className="w-full">
-              Cancel withdrawal
-            </Button>
+            <>
+              <Timer className="size-3.5" />
+              Leaves after a {formatCooldownAdj(cooldownSeconds)} waiting period
+            </>
           )}
-        </section>
-      )}
-    </main>
+        </p>
+      </div>
+
+      <AmountPresets presets={presets} value={amount} onPick={setAmount} />
+
+      <AmountKeypad
+        value={amount}
+        onChange={setAmount}
+        onConfirm={() => amountValid && setReviewOpen(true)}
+        confirmDisabled={!amountValid}
+        confirmLabel="Review withdrawal"
+      />
+
+      <Sheet open={reviewOpen} onOpenChange={setReviewOpen}>
+        <SheetContent title="Review withdrawal">
+          <div className="flex flex-col gap-5">
+            <Money value={value || 0} className="block text-center text-[40px] font-semibold" centsClassName="text-[26px]" />
+            <Card className="bg-surface-2/50">
+              <CardRows>
+                <Row label="From">Savings</Row>
+                <Row label="To">
+                  <span className="font-mono">{address ? shorten(address) : "Your wallet"}</span>
+                </Row>
+                <Row label="Waiting period">{formatCooldown(cooldownSeconds)}</Row>
+                <Row label="Releases about">{formatDateTime(now + cooldownSeconds * 1000)}</Row>
+                <Row label="Cancel fee">
+                  <span className="text-primary">None</span>
+                </Row>
+              </CardRows>
+            </Card>
+            <p className="rounded-2xl bg-warning/10 px-4 py-3 text-[12.5px] leading-relaxed text-warning ring-1 ring-warning/25">
+              Your money waits here first. You can cancel any time before it releases.
+            </p>
+            <SlideToConfirm label="Slide to start" onConfirm={start} />
+          </div>
+        </SheetContent>
+      </Sheet>
+    </Screen>
   );
 }

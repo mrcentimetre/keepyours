@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BadgeCheck, Zap } from "lucide-react";
+import { toast } from "sonner";
 import { getKeptBalance } from "@/lib/mock-activity";
 import {
   getOpenAdvance,
@@ -13,33 +15,76 @@ import {
   FEE_TIERS,
   type Advance,
 } from "@/lib/mock-advance";
-import AmountKeypad, { type AmountPreset } from "./amount-keypad";
-import { Card } from "./ui/card";
+import { formatUsdc } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import AmountKeypad, { AmountDisplay, AmountPresets, type AmountPreset } from "./amount-keypad";
+import { Screen, ScreenHeader, Money, SectionLabel } from "./app/screen";
+import SlideToConfirm from "./slide-to-confirm";
+import { Card, CardRows } from "./ui/card";
 import { Button } from "./ui/button";
-import { Skeleton } from "./ui/skeleton";
 import { Badge } from "./ui/badge";
+import { Skeleton } from "./ui/skeleton";
+import { Sheet, SheetContent } from "./ui/sheet";
 
-function formatUsdc(n: number): string {
-  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
+const DAY_MS = 24 * 60 * 60 * 1000;
+const TIER_COLORS = ["bg-primary", "bg-warning/60", "bg-warning"] as const;
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
 function daysElapsed(takenAt: number, now: number): number {
-  return Math.max(0, Math.floor((now - takenAt) / (24 * 60 * 60 * 1000)));
+  return Math.max(0, Math.floor((now - takenAt) / DAY_MS));
+}
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between gap-4 px-4 py-3.5 text-[14px]">
+      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <span className="text-right font-medium">{children}</span>
+    </div>
+  );
+}
+
+/** The 90-day fee schedule as three segments, with an optional marker for
+ * where an open advance sits today. */
+function FeeTimeline({ day }: { day?: number }) {
+  return (
+    <div>
+      <div className="relative">
+        <div className="flex h-2 gap-1 overflow-hidden rounded-full">
+          {FEE_TIERS.map((t, i) => (
+            <div key={t.label} className={cn("flex-1", TIER_COLORS[i])} />
+          ))}
+        </div>
+        {day !== undefined && (
+          <span
+            aria-hidden="true"
+            className="absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-foreground ring-4 ring-card"
+            style={{ left: `${Math.min(100, (day / 90) * 100)}%` }}
+          />
+        )}
+      </div>
+      <div className="mt-2.5 grid grid-cols-3 text-[11.5px]">
+        {FEE_TIERS.map((t, i) => (
+          <div key={t.label} className={i === 1 ? "text-center" : i === 2 ? "text-right" : ""}>
+            <p className={cn("font-bold", i === 0 ? "text-primary" : "text-warning")}>{t.label}</p>
+            <p className="text-muted-foreground">{t.rangeLabel}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function AdvanceSkeleton() {
   return (
-    <main className="flex min-h-dvh flex-col gap-6 p-6 pb-10">
-      <Skeleton className="h-7 w-28" />
-      <Skeleton className="mx-auto h-4 w-56" />
-      <Skeleton className="mx-auto h-12 w-32" />
-      <Skeleton className="h-24 w-full rounded-2xl" />
-      <Skeleton className="h-56 w-full rounded-2xl" />
-    </main>
+    <Screen>
+      <Skeleton className="h-8 w-32" />
+      <Skeleton className="h-[120px]" />
+      <Skeleton className="mx-auto h-14 w-44" />
+      <Skeleton className="h-[270px]" />
+    </Screen>
   );
 }
 
@@ -48,7 +93,7 @@ export default function AdvanceScreen() {
   const [balance, setBalance] = useState(0);
   const [advance, setAdvance] = useState<Advance | null>(null);
   const [amount, setAmount] = useState("");
-  const [step, setStep] = useState<"amount" | "confirm">("amount");
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   function refresh() {
@@ -66,8 +111,8 @@ export default function AdvanceScreen() {
     refresh();
   }, []);
 
-  // Ticks every minute while an advance is open, just enough to move the
-  // "days elapsed" / fee-tier display without a full per-second countdown.
+  // Ticks every minute while an advance is open — enough to move the day
+  // counter and fee tier without a per-second countdown.
   useEffect(() => {
     if (!advance) return;
     const id = setInterval(() => setNow(Date.now()), 60_000);
@@ -78,7 +123,8 @@ export default function AdvanceScreen() {
 
   const max = getMaxAdvance();
   const value = Number(amount);
-  const amountValid = Number.isFinite(value) && value > 0 && value <= max;
+  const overMax = value > max;
+  const amountValid = Number.isFinite(value) && value > 0 && !overMax;
 
   const presets: AmountPreset[] =
     max > 0
@@ -90,130 +136,143 @@ export default function AdvanceScreen() {
         ]
       : [];
 
-  function handleConfirm() {
+  function borrow() {
     if (!amountValid) return;
     requestAdvance(value);
-    setAmount("");
-    setStep("amount");
-    refresh();
+    setTimeout(() => {
+      setAmount("");
+      setReviewOpen(false);
+      refresh();
+      toast.success(`$${formatUsdc(value)} is on its way to your spending balance`);
+    }, 350);
   }
 
-  function handleRepay() {
+  function repay() {
     repayAdvance();
     refresh();
+    toast.success("Advance repaid");
   }
 
-  return (
-    <main className="flex min-h-dvh flex-col gap-6 p-6 pb-10 duration-500 animate-in fade-in slide-in-from-bottom-2">
-      <h1 className="font-display text-[22px] font-bold">Advance</h1>
+  // ── Open advance ────────────────────────────────────────────
+  if (advance) {
+    const day = daysElapsed(advance.takenAt, now);
+    const overdue = isOverdue(advance.takenAt, now);
+    const feeBps = getFeeBps(advance.takenAt, now);
 
-      {!advance ? (
-        step === "amount" ? (
-          <section className="flex flex-col gap-5">
-            <p className="text-center text-[13px] text-muted-foreground">
-              Up to 50% of savings: <span className="text-foreground">${formatUsdc(max)}</span>
-              <br />
-              from the advance pool, never other users&apos; savings
-            </p>
+    return (
+      <Screen>
+        <ScreenHeader title="Advance" subtitle="Repaid automatically from your next payment" />
 
-            <div className="flex items-center justify-center gap-1 py-2 text-center">
-              <p className="font-mono text-[40px] font-semibold text-foreground">${amount || "0"}</p>
-              <span className="h-[34px] w-[2px] animate-pulse bg-primary" aria-hidden="true" />
-            </div>
-
-            <Card className="flex flex-col gap-2 p-4">
-              <p className="text-[12px] text-muted-foreground">Fee if not repaid before your next payment</p>
-              {FEE_TIERS.map((tier) => (
-                <div key={tier.label} className="flex items-center justify-between text-[13px]">
-                  <span className="text-muted-foreground">{tier.rangeLabel}</span>
-                  <span className={tier.bps === 0 ? "text-primary" : "text-foreground"}>{tier.label}</span>
-                </div>
-              ))}
-            </Card>
-
-            <AmountKeypad
-              value={amount}
-              onChange={setAmount}
-              presets={presets}
-              onConfirm={() => amountValid && setStep("confirm")}
-              confirmDisabled={max <= 0 || !amountValid}
-              confirmLabel="Review advance"
-            />
-          </section>
-        ) : (
-          <section className="flex flex-col gap-5">
-            <Card className="flex flex-col items-center gap-1 p-6 text-center">
-              <p className="text-[13px] text-muted-foreground">You&apos;ll receive</p>
-              <p className="font-mono text-[32px] font-semibold text-foreground">${formatUsdc(value)}</p>
-              <p className="text-[12px] text-muted-foreground">to your spending balance, right away</p>
-            </Card>
-
-            <Card className="flex flex-col gap-2 p-4 text-[13px]">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Fee today</span>
-                <span className="text-primary">Free</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Repayment</span>
-                <span className="text-foreground">Automatic, from your next payment</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Your savings</span>
-                <span className="text-foreground">Stay locked as security until repaid</span>
-              </div>
-            </Card>
-
-            <Button onClick={handleConfirm}>Confirm advance</Button>
-            <Button variant="link" onClick={() => setStep("amount")}>
-              Back
-            </Button>
-          </section>
-        )
-      ) : (
-        <section className="flex flex-col items-center gap-5">
-          <Card className="flex w-full flex-col items-center gap-2 p-6 text-center">
-            <p className="text-[13px] text-muted-foreground">Open advance</p>
-            <p className="font-mono text-[32px] font-semibold text-foreground">
-              ${formatUsdc(advance.amountUsdc)}
-            </p>
-            <p className="text-[12px] text-muted-foreground">
-              taken {daysElapsed(advance.takenAt, now)} day{daysElapsed(advance.takenAt, now) === 1 ? "" : "s"} ago
-            </p>
-          </Card>
-
-          <Card
-            className={
-              "flex w-full flex-col items-center gap-2 p-6 text-center " +
-              (isOverdue(advance.takenAt, now) ? "border-destructive/30 bg-destructive/10" : "border-warning/30 bg-warning/10")
-            }
-          >
-            <Badge variant={isOverdue(advance.takenAt, now) ? "destructive" : "warning"}>
-              {isOverdue(advance.takenAt, now) ? "Overdue" : "Fee if settled today"}
+        <Card className="relative overflow-hidden p-5">
+          <span aria-hidden="true" className="absolute -top-10 -right-10 size-32 rounded-full bg-primary/20 blur-3xl" />
+          <div className="flex items-start justify-between">
+            <SectionLabel>Open advance</SectionLabel>
+            <Badge variant={overdue ? "destructive" : feeBps === 0 ? "default" : "warning"}>
+              {overdue ? "Overdue" : feeBps === 0 ? "Free right now" : `${(feeBps / 100).toFixed(1)}% fee`}
             </Badge>
-            <p
-              className={
-                "font-mono text-[28px] font-semibold " +
-                (isOverdue(advance.takenAt, now) ? "text-destructive" : "text-warning")
-              }
-            >
-              {getFeeBps(advance.takenAt, now) === 0
-                ? "Free"
-                : `${(getFeeBps(advance.takenAt, now) / 100).toFixed(1)}% · $${formatUsdc(
-                    getFeeOwed(advance, now)
-                  )}`}
-            </p>
-            <p className="text-[12px] text-muted-foreground">
-              {isOverdue(advance.takenAt, now)
-                ? "Past 90 days — settleable from your savings."
-                : "Repaid automatically, before the split, on your next payment."}
-            </p>
-          </Card>
+          </div>
+          <Money value={advance.amountUsdc} className="mt-2 block text-[40px] leading-none font-semibold" centsClassName="text-[26px]" />
+          <p className="mt-2 text-[13px] text-muted-foreground">
+            Taken {day === 0 ? "today" : `${day} day${day === 1 ? "" : "s"} ago`} · day {day + 1} of 90
+          </p>
+          <div className="mt-6">
+            <FeeTimeline day={day} />
+          </div>
+        </Card>
 
-          <Button onClick={handleRepay} variant="outline" className="w-full">
-            Repay now (simulate)
-          </Button>
-        </section>
-      )}
-    </main>
+        <Card>
+          <CardRows>
+            <Row label="Fee if repaid today">
+              {feeBps === 0 ? (
+                <span className="text-primary">Free</span>
+              ) : (
+                <span className="text-warning">${formatUsdc(getFeeOwed(advance, now))}</span>
+              )}
+            </Row>
+            <Row label="Repayment">Next payment, before the split</Row>
+            <Row label="After day 90">Settled from savings</Row>
+          </CardRows>
+        </Card>
+
+        <Button onClick={repay} variant="outline" className="w-full">
+          Repay now (simulate)
+        </Button>
+      </Screen>
+    );
+  }
+
+  // ── Entry ───────────────────────────────────────────────────
+  return (
+    <Screen className="gap-5">
+      <ScreenHeader title="Advance" subtitle="Borrow against your own savings" />
+
+      <Card className="relative overflow-hidden p-5">
+        <span aria-hidden="true" className="absolute -top-10 -right-10 size-32 rounded-full bg-primary/20 blur-3xl" />
+        <div className="flex items-start justify-between">
+          <div>
+            <SectionLabel>Available now</SectionLabel>
+            <Money value={max} className="mt-1.5 block text-[28px] leading-none font-semibold" centsClassName="text-[20px]" />
+          </div>
+          <span className="flex size-11 items-center justify-center rounded-full bg-primary/15 text-primary">
+            <Zap className="size-5" />
+          </span>
+        </div>
+        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-surface-2">
+          <div className="h-full w-1/2 rounded-full bg-gradient-to-r from-primary to-accent" />
+        </div>
+        <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
+          50% of ${formatUsdc(balance)} savings · from the advance pool, never other users&apos; savings
+        </p>
+      </Card>
+
+      <div className="flex flex-col items-center gap-1 py-1">
+        <AmountDisplay value={amount} invalid={overMax} />
+        <p className={"flex items-center gap-1.5 text-[12.5px] " + (overMax ? "text-destructive" : "text-muted-foreground")}>
+          {overMax ? (
+            <>Up to ${formatUsdc(max)} right now</>
+          ) : (
+            <>
+              <BadgeCheck className="size-3.5 text-primary" />
+              Free for the first 30 days
+            </>
+          )}
+        </p>
+      </div>
+
+      <AmountPresets presets={presets} value={amount} onPick={setAmount} />
+
+      <AmountKeypad
+        value={amount}
+        onChange={setAmount}
+        onConfirm={() => amountValid && setReviewOpen(true)}
+        confirmDisabled={!amountValid}
+        confirmLabel="Review advance"
+      />
+
+      <Sheet open={reviewOpen} onOpenChange={setReviewOpen}>
+        <SheetContent title="Review advance">
+          <div className="flex flex-col gap-5">
+            <div className="text-center">
+              <Money value={value || 0} className="block text-[40px] font-semibold" centsClassName="text-[26px]" />
+              <p className="mt-1 text-[13px] text-muted-foreground">to your spending balance, right away</p>
+            </div>
+            <Card className="bg-surface-2/50 p-4">
+              <SectionLabel className="mb-3">Fee schedule</SectionLabel>
+              <FeeTimeline />
+            </Card>
+            <Card className="bg-surface-2/50">
+              <CardRows>
+                <Row label="Fee today">
+                  <span className="text-primary">Free</span>
+                </Row>
+                <Row label="Repayment">Next payment, before the split</Row>
+                <Row label="Your savings">Locked until repaid</Row>
+              </CardRows>
+            </Card>
+            <SlideToConfirm label="Slide to borrow" onConfirm={borrow} />
+          </div>
+        </SheetContent>
+      </Sheet>
+    </Screen>
   );
 }
