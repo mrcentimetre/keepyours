@@ -4,8 +4,22 @@ import { useEffect, useState } from "react";
 import QrCode from "./qr-code";
 import OnboardingCarousel, { ONBOARDED_KEY } from "./onboarding-carousel";
 import WalletGate from "./wallet-gate";
+import InAppBrowserNotice from "./in-app-browser-notice";
 
 const BYPASS_KEY = "ky_continue_in_browser";
+const IN_APP_DISMISSED_KEY = "ky_in_app_warning_dismissed";
+
+// Best-effort only: Telegram's own tracker (github.com/TelegramMessenger/
+// Telegram-iOS/issues/736) shows it doesn't always add "Telegram" to the UA
+// for a plain external link, only reliably for registered Mini Apps — so
+// this can miss real cases. Markers checked 28 Sep 2026: Telegram adds
+// "Telegram" (iOS suffix, or "Telegram-Android/" prefix); X adds
+// "TwitterAndroid" or "Twitter for iPhone". False positives are handled by
+// the "Continue anyway" escape hatch, not by trying to be exhaustive.
+function detectInAppBrowser(): boolean {
+  const ua = navigator.userAgent || "";
+  return /Telegram/i.test(ua) || /TwitterAndroid|Twitter for iPhone/i.test(ua);
+}
 
 type Platform = "ios" | "android" | "other-mobile" | "desktop";
 
@@ -136,15 +150,19 @@ export default function InstallGate() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [url, setUrl] = useState("");
   const [onboarded, setOnboarded] = useState(false);
+  const [inAppBrowser, setInAppBrowser] = useState(false);
+  const [inAppDismissed, setInAppDismissed] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     setStandalone(detectStandalone());
     setPlatform(detectPlatform());
+    setInAppBrowser(detectInAppBrowser());
     setUrl(window.location.origin + "/app");
     try {
       setBypassed(localStorage.getItem(BYPASS_KEY) === "1");
       setOnboarded(localStorage.getItem(ONBOARDED_KEY) === "1");
+      setInAppDismissed(localStorage.getItem(IN_APP_DISMISSED_KEY) === "1");
     } catch {
       // private-mode storage can throw; default to not bypassed/onboarded
     }
@@ -175,10 +193,27 @@ export default function InstallGate() {
     setOnboarded(true);
   }
 
+  function dismissInAppWarning() {
+    try {
+      localStorage.setItem(IN_APP_DISMISSED_KEY, "1");
+    } catch {
+      // fine without persistence; just shows again next visit
+    }
+    setInAppDismissed(true);
+  }
+
   if (!mounted) return null; // avoid a flash before we know the platform
 
   if (standalone || bypassed) {
     return onboarded ? <WalletGate /> : <OnboardingCarousel onDone={finishOnboarding} />;
+  }
+
+  // Checked before the normal install steps: none of those (or passkey
+  // creation, later) reliably work inside Telegram/X's in-app browser, so
+  // catch it first rather than let someone follow install steps that fail
+  // at the passkey step anyway.
+  if (inAppBrowser && !inAppDismissed) {
+    return <InAppBrowserNotice onContinue={dismissInAppWarning} />;
   }
 
   return (
