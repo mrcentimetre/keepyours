@@ -1,4 +1,70 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+/* Product-app design tokens (/app/*). The waitlist page above has its own
+ * @theme block right below this one — the two never share a token name, on
+ * purpose: --color-green/--color-ink etc. are the waitlist's, --background/
+ * --card/--primary etc. below are the app's. Values here are CLAUDE.md's
+ * Brand palette (Night/Card/Keep green/Mint/Cooldown amber/Block red/Muted/
+ * Ink), just given shadcn's standard variable names so cva-based ui/
+ * components (Button, Card, ...) work without redefining color per-component.
+ * Scoped to .ky-app (set on app/app/layout's root div) rather than :root,
+ * since the app is always dark and the waitlist is always light — there's
+ * no mode to switch, so no .dark class/toggle machinery is needed here. */
+.ky-app {
+  color-scheme: dark;
+
+  --background: #060e0a;
+  --foreground: #eaf5ef;
+  --card: #12211a;
+  --card-foreground: #eaf5ef;
+  --popover: #12211a;
+  --popover-foreground: #eaf5ef;
+  --primary: #16b862;
+  --primary-foreground: #03170c;
+  --secondary: #1e3428;
+  --secondary-foreground: #eaf5ef;
+  --muted: #12211a;
+  --muted-foreground: #8ca497;
+  --accent: #62e6a0;
+  --accent-foreground: #03170c;
+  --destructive: #ff7070;
+  --destructive-foreground: #2a0b0b;
+  --warning: #f4b545;
+  --warning-foreground: #2a1b02;
+  --border: #1e3428;
+  --input: #1e3428;
+  --ring: #62e6a0;
+  --radius: 1.25rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 8px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 6px);
+}
 
 @theme {
   --color-green: #16b862;

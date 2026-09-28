@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from "next";
+import { Toaster } from "sonner";
 import RegisterSW from "@/components/register-sw";
 import AppShell from "@/components/app-shell";
 
 // The product app is a dark, "Night" theme — different from the waitlist's
-// light theme at /. Colours here are literal hex (CLAUDE.md's Brand
-// section), not the shared @theme tokens in app/globals.css: those tokens
-// (text-ink, text-muted, ...) are tuned for the light waitlist page and
-// would be the wrong contrast on a dark background if reused here.
+// light theme at /. The .ky-app class (app/globals.css) carries its own
+// --background/--card/--primary/... tokens, separate from the waitlist's
+// @theme block, so bg-background/text-foreground/etc. below always resolve
+// to the dark palette here regardless of what the waitlist page is doing.
 export const viewport: Viewport = {
   themeColor: "#060E0A",
   viewportFit: "cover",
@@ -30,9 +31,20 @@ export const metadata: Metadata = {
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-dvh bg-[#060E0A] font-sans text-[#EAF5EF] antialiased">
+    <div className="ky-app min-h-dvh bg-background font-sans text-foreground antialiased">
       <RegisterSW />
       <AppShell>{children}</AppShell>
+      <Toaster
+        theme="dark"
+        position="top-center"
+        toastOptions={{
+          style: {
+            background: "var(--card)",
+            border: "1px solid var(--border)",
+            color: "var(--foreground)",
+          },
+        }}
+      />
     </div>
   );
 }
