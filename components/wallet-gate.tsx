@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { usePasskeyWallet, hasExistingPasskey } from "@/hooks/use-passkey-wallet";
+import SecondDeviceNotice from "./second-device-notice";
+
+const SEEN_NOTICE_KEY = "ky_seen_second_device_notice";
 
 function Logo() {
   return (
@@ -17,12 +20,27 @@ function shorten(address: string): string {
 export default function WalletGate() {
   const [mounted, setMounted] = useState(false);
   const [returning, setReturning] = useState(false);
-  const { status, address, error, configured, create, unlock } = usePasskeyWallet();
+  const [noticeSeen, setNoticeSeen] = useState(false);
+  const { status, address, error, justCreated, configured, create, unlock } = usePasskeyWallet();
 
   useEffect(() => {
     setMounted(true);
     setReturning(hasExistingPasskey());
+    try {
+      setNoticeSeen(localStorage.getItem(SEEN_NOTICE_KEY) === "1");
+    } catch {
+      // fine without persistence; just shows the notice again next time
+    }
   }, []);
+
+  function dismissNotice() {
+    try {
+      localStorage.setItem(SEEN_NOTICE_KEY, "1");
+    } catch {
+      // ditto
+    }
+    setNoticeSeen(true);
+  }
 
   if (!mounted) return null;
 
@@ -37,6 +55,10 @@ export default function WalletGate() {
         </p>
       </main>
     );
+  }
+
+  if (status === "ready" && address && justCreated && !noticeSeen) {
+    return <SecondDeviceNotice onContinue={dismissNotice} />;
   }
 
   if (status === "ready" && address) {

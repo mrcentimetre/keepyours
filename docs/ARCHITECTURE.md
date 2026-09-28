@@ -75,7 +75,7 @@ Costs of the choice:
 - **First open** creates the passkey (one Face ID prompt), which creates the wallet. **Every later open** is a single "Unlock" button. There is no email or password.
 - **In-app browsers** (Telegram, X) often fail to create passkeys. The app detects them and shows "open in Safari/Chrome".
 - Fallback path: "I have a wallet" (injected or WalletConnect).
-- **Lost devices:** a user who loses every device with the passkey has no recovery. The app tells them to add a second passkey (another device) during setup, and the optional guardian can help with a stuck withdrawal. We cannot reset a passkey, and we say so.
+- **Lost devices:** a user who loses every device with the passkey has no recovery. After creating one, a one-time notice says so plainly and explains that platform sync (iCloud Keychain, Google Password Manager) is the only thing that puts it on another device — that's education, not a feature: there's no real second-signer mechanism yet, and the optional guardian can only help with a stuck withdrawal, not restore access. We cannot reset a passkey, and we say so.
 - **Later:** Privy sign-in (email or Google) for people who want recovery. It puts a provider in the signing path, so it is offered as a choice, never forced.
 
 ## PWA only

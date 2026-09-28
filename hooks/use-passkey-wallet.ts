@@ -25,6 +25,10 @@ export function usePasskeyWallet() {
   const [status, setStatus] = useState<WalletStatus>("idle");
   const [wallet, setWallet] = useState<PasskeyWallet | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // True only right after a fresh Register — distinguishes "just created"
+  // from "just unlocked", so the second-device notice (T2.2) shows once,
+  // on creation only, not on every later unlock.
+  const [justCreated, setJustCreated] = useState(false);
 
   const run = useCallback(async (fn: () => Promise<PasskeyWallet>, markCreated: boolean) => {
     setStatus("connecting");
@@ -33,6 +37,7 @@ export function usePasskeyWallet() {
       const result = await fn();
       setWallet(result);
       setStatus("ready");
+      setJustCreated(markCreated);
       if (markCreated) {
         try {
           localStorage.setItem(HAS_PASSKEY_KEY, "1");
@@ -57,6 +62,7 @@ export function usePasskeyWallet() {
     address: wallet?.address ?? null,
     kernelClient: wallet?.kernelClient ?? null,
     error,
+    justCreated,
     configured: isZeroDevConfigured(),
     create,
     unlock,

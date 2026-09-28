@@ -18,7 +18,7 @@ Priority key: **MVP** = must work for the 4 Oct demo · **Stretch** = if time al
 
 - **Passkey only.** First open creates a passkey (one Face ID prompt) and with it the wallet. Later opens are one "Unlock" button. No email, no password, no seed phrase.
 - The app is an **installed PWA** on a phone. A mobile browser tab shows install steps; desktop shows a gate page with a QR code and a phone-shaped preview. A small "continue in browser (demo)" link stays for reviewers.
-- Setup asks for a **second passkey** (another device), because a lost device has no recovery.
+- After creating a passkey, a one-time notice explains that platform sync (iCloud Keychain, Google Password Manager) is the only backup, and that losing every device means losing the wallet. **Not a working second-signer mechanism** — building one needs a multi-validator setup that doesn't exist yet, and a button implying real recovery without one would be misleading. Real multi-device recovery is a later, separately scoped feature.
 - "I have a wallet" is the fallback for people who prefer a seed-phrase wallet.
 - The domain must be live before anyone creates a passkey. Passkeys are tied to it.
 
