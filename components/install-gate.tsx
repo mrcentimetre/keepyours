@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import QrCode from "./qr-code";
+import OnboardingCarousel, { ONBOARDED_KEY } from "./onboarding-carousel";
 
 const BYPASS_KEY = "ky_continue_in_browser";
 
@@ -146,6 +147,7 @@ export default function InstallGate() {
   const [platform, setPlatform] = useState<Platform>("desktop");
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [url, setUrl] = useState("");
+  const [onboarded, setOnboarded] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -154,8 +156,9 @@ export default function InstallGate() {
     setUrl(window.location.origin + "/app");
     try {
       setBypassed(localStorage.getItem(BYPASS_KEY) === "1");
+      setOnboarded(localStorage.getItem(ONBOARDED_KEY) === "1");
     } catch {
-      // private-mode storage can throw; default to not bypassed
+      // private-mode storage can throw; default to not bypassed/onboarded
     }
 
     const onPrompt = (e: Event) => {
@@ -175,9 +178,20 @@ export default function InstallGate() {
     setBypassed(true);
   }
 
+  function finishOnboarding() {
+    try {
+      localStorage.setItem(ONBOARDED_KEY, "1");
+    } catch {
+      // fine without persistence; just shows again next visit
+    }
+    setOnboarded(true);
+  }
+
   if (!mounted) return null; // avoid a flash before we know the platform
 
-  if (standalone || bypassed) return <InsideApp />;
+  if (standalone || bypassed) {
+    return onboarded ? <InsideApp /> : <OnboardingCarousel onDone={finishOnboarding} />;
+  }
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center gap-8 p-8 text-center">
