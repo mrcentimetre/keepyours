@@ -2,39 +2,57 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HomeIcon, WithdrawIcon, AdvanceIcon, SettingsIcon } from "./icons";
+import { House, ArrowUpFromLine, Zap, Settings } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const TABS = [
-  { href: "/app/home", label: "Home", Icon: HomeIcon },
-  { href: "/app/withdraw", label: "Withdraw", Icon: WithdrawIcon },
-  { href: "/app/advance", label: "Advance", Icon: AdvanceIcon },
-  { href: "/app/settings", label: "Settings", Icon: SettingsIcon },
+  { href: "/app/home", label: "Home", Icon: House },
+  { href: "/app/withdraw", label: "Withdraw", Icon: ArrowUpFromLine },
+  { href: "/app/advance", label: "Advance", Icon: Zap },
+  { href: "/app/settings", label: "Settings", Icon: Settings },
 ] as const;
 
+/**
+ * A floating dock, not a full-width bar. Inactive tabs are icon-only; the
+ * active one widens into a green pill and shows its label — the current tab
+ * is unmistakable without a thin underline, and it leaves room to grow.
+ */
 export default function BottomNav() {
   const pathname = usePathname();
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/80 backdrop-blur-xl"
-      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      aria-label="Main"
+      className="fixed inset-x-3 z-30 mx-auto flex max-w-[436px] items-center gap-1 rounded-[24px] bg-[#0d1a13]/90 p-2 shadow-float ring-1 ring-white/[0.07] backdrop-blur-xl"
+      style={{ bottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
     >
-      <div className="mx-auto flex max-w-[480px] items-center justify-around px-2 py-2">
-        {TABS.map(({ href, label, Icon }) => {
-          const active = pathname === href;
-          return (
-            <Link key={href} href={href} className="relative flex flex-col items-center gap-1 px-4 py-1.5">
-              {active && (
-                <span className="absolute -top-2 h-1 w-6 rounded-full bg-primary" aria-hidden="true" />
+      {TABS.map(({ href, label, Icon }) => {
+        const active = pathname === href;
+        return (
+          <Link
+            key={href}
+            href={href}
+            aria-current={active ? "page" : undefined}
+            aria-label={label}
+            className={cn(
+              "flex min-h-12 items-center justify-center gap-2 rounded-full px-4 transition-all duration-300 ease-out",
+              active
+                ? "flex-[1_1_auto] bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-brand"
+                : "flex-[0_0_auto] text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Icon className="size-[21px]" strokeWidth={active ? 2.4 : 2} aria-hidden="true" />
+            <span
+              className={cn(
+                "overflow-hidden text-[13px] font-bold whitespace-nowrap transition-all duration-300",
+                active ? "max-w-[110px] opacity-100" : "max-w-0 opacity-0"
               )}
-              <Icon active={active} />
-              <span className={`text-[11px] transition-colors ${active ? "font-medium text-primary" : "text-muted-foreground"}`}>
-                {label}
-              </span>
-            </Link>
-          );
-        })}
-      </div>
+            >
+              {label}
+            </span>
+          </Link>
+        );
+      })}
     </nav>
   );
 }

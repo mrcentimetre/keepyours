@@ -7,7 +7,9 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
       type={type}
       data-slot="input"
       className={cn(
-        "h-11 w-full rounded-2xl border border-border bg-card px-4 text-[14px] text-foreground outline-none placeholder:text-muted-foreground transition-colors focus:border-ring disabled:opacity-50",
+        // 16px on purpose: iOS Safari zooms the whole page when a focused
+        // input's text is smaller than that.
+        "h-12 w-full rounded-2xl bg-surface-2 px-4 text-[16px] text-foreground outline-none ring-1 ring-transparent placeholder:text-muted-foreground transition-shadow focus:ring-ring/60 disabled:opacity-50",
         className
       )}
       {...props}

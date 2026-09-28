@@ -36,6 +36,71 @@
   --input: #1e3428;
   --ring: #62e6a0;
   --radius: 1.25rem;
+
+  /* One step up from --card: keypad keys, inputs, rows inside a card. A money
+     app lives on layered surfaces, not on borders — borders on every box is
+     most of what made the first pass read as a prototype. */
+  --surface-2: #182b21;
+  --hairline: rgba(234, 245, 239, 0.06);
+
+  --hero:
+    radial-gradient(120% 85% at 100% 0%, rgba(98, 230, 160, 0.34) 0%, transparent 55%),
+    linear-gradient(160deg, #0a2e1e 0%, #0d4429 52%, #138a4d 135%);
+
+  --elev-card: 0 1px 0 0 rgba(255, 255, 255, 0.03) inset, 0 18px 40px -26px rgba(0, 0, 0, 0.85);
+  --elev-float: 0 22px 44px -16px rgba(0, 0, 0, 0.9);
+  --elev-brand: 0 12px 28px -12px rgba(22, 184, 98, 0.6);
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ky-app ::selection {
+  background: rgba(98, 230, 160, 0.3);
+}
+
+/* Range input (setup's split slider): a real thumb, not the platform default
+   that renders as a thin grey bar on iOS. */
+.ky-app input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  height: 32px;
+}
+.ky-app input[type="range"]::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+.ky-app input[type="range"]::-moz-range-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+.ky-app input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 28px;
+  height: 28px;
+  margin-top: -10px;
+  border-radius: 50%;
+  background: #eaf5ef;
+  box-shadow: 0 0 0 6px rgba(22, 184, 98, 0.35), 0 6px 14px rgba(0, 0, 0, 0.5);
+}
+.ky-app input[type="range"]::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: #eaf5ef;
+  box-shadow: 0 0 0 6px rgba(22, 184, 98, 0.35), 0 6px 14px rgba(0, 0, 0, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ky-app *,
+  .ky-app *::before,
+  .ky-app *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @theme inline {
@@ -60,6 +125,11 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-surface-2: var(--surface-2);
+  --color-hairline: var(--hairline);
+  --shadow-card: var(--elev-card);
+  --shadow-float: var(--elev-float);
+  --shadow-brand: var(--elev-brand);
   --radius-sm: calc(var(--radius) - 8px);
   --radius-md: calc(var(--radius) - 4px);
   --radius-lg: var(--radius);

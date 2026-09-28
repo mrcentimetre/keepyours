@@ -14,7 +14,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <div className={showNav ? "pb-20" : ""}>{children}</div>
+      {/* A phone app stays a phone-width column on anything wider, rather
+          than stretching — a 1200px-wide keypad is most of what made the
+          desktop "continue in browser" view look unfinished. */}
+      <div
+        className="mx-auto w-full max-w-[460px]"
+        style={showNav ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 96px)" } : undefined}
+      >
+        {children}
+      </div>
       {showNav && <BottomNav />}
     </>
   );
