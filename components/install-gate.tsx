@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import QrCode from "./qr-code";
 import OnboardingCarousel, { ONBOARDED_KEY } from "./onboarding-carousel";
+import WalletGate from "./wallet-gate";
 
 const BYPASS_KEY = "ky_continue_in_browser";
 
@@ -48,19 +49,6 @@ function ContinueInBrowser({ onContinue }: { onContinue: () => void }) {
     >
       Continue in browser (demo)
     </button>
-  );
-}
-
-/** Placeholder for what T3.1+ renders once installed/bypassed. */
-function InsideApp() {
-  return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-3 p-8 text-center">
-      <Logo />
-      <p className="font-display text-2xl font-bold">You&rsquo;re in</p>
-      <p className="max-w-[42ch] text-sm text-[#8CA497]">
-        Setup, home, withdraw and advance screens land next. This is a placeholder.
-      </p>
-    </main>
   );
 }
 
@@ -190,7 +178,7 @@ export default function InstallGate() {
   if (!mounted) return null; // avoid a flash before we know the platform
 
   if (standalone || bypassed) {
-    return onboarded ? <InsideApp /> : <OnboardingCarousel onDone={finishOnboarding} />;
+    return onboarded ? <WalletGate /> : <OnboardingCarousel onDone={finishOnboarding} />;
   }
 
   return (
