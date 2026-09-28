@@ -43,15 +43,40 @@
   --surface-2: #182b21;
   --hairline: rgba(234, 245, 239, 0.06);
 
+  /* The brand's contour-line texture (brand/bg-square-1254.png, compressed
+     to public/brand/), with a light wash so white text on the brightest
+     part of the glow stays readable. */
   --hero:
-    radial-gradient(120% 85% at 100% 0%, rgba(98, 230, 160, 0.34) 0%, transparent 55%),
-    linear-gradient(160deg, #0a2e1e 0%, #0d4429 52%, #138a4d 135%);
+    linear-gradient(180deg, rgba(6, 14, 10, 0.05) 0%, rgba(6, 14, 10, 0.35) 100%),
+    url("/brand/contour-square.jpg") 50% 35% / cover no-repeat,
+    #0a2e1e;
 
   --elev-card: 0 1px 0 0 rgba(255, 255, 255, 0.03) inset, 0 18px 40px -26px rgba(0, 0, 0, 0.85);
   --elev-float: 0 22px 44px -16px rgba(0, 0, 0, 0.9);
   --elev-brand: 0 12px 28px -12px rgba(22, 184, 98, 0.6);
 
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Everything BEHIND the app is Night too, whenever the app is on screen.
+   <html> carries the waitlist's light background (#eff8f3) and its light
+   gradient/grain layers below; on an iPhone, the installed app first paints
+   with a viewport a little shorter than the screen, and that light page
+   showed through as a white band at the bottom until you scrolled. :has()
+   scopes this to the app's routes, so the waitlist page is untouched. */
+html:has(.ky-app) {
+  background-color: #060e0a;
+  /* An app, not a document: no rubber-band bounce revealing what's behind,
+     and no pinch-zoom (pan-x pan-y leaves scrolling and allows no zoom). */
+  overscroll-behavior: none;
+  touch-action: pan-x pan-y;
+}
+html:has(.ky-app) body {
+  background-color: #060e0a;
+}
+html:has(.ky-app)::before,
+html:has(.ky-app) body::before {
+  display: none;
 }
 
 .ky-app ::selection {
@@ -92,6 +117,24 @@
   border-radius: 50%;
   background: #eaf5ef;
   box-shadow: 0 0 0 6px rgba(22, 184, 98, 0.35), 0 6px 14px rgba(0, 0, 0, 0.5);
+}
+
+/* A range that fills green up to the thumb — set --fill (e.g. "40%") inline. */
+.ky-app input[type="range"].ky-fill::-webkit-slider-runnable-track {
+  height: 10px;
+  background: linear-gradient(90deg, var(--primary) 0%, var(--accent) var(--fill, 0%), var(--surface-2) var(--fill, 0%));
+}
+.ky-app input[type="range"].ky-fill::-moz-range-track {
+  height: 10px;
+  background: var(--surface-2);
+}
+.ky-app input[type="range"].ky-fill::-moz-range-progress {
+  height: 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+}
+.ky-app input[type="range"].ky-fill::-webkit-slider-thumb {
+  margin-top: -9px;
 }
 
 @media (prefers-reduced-motion: reduce) {

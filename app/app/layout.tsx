@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Toaster } from "sonner";
 import RegisterSW from "@/components/register-sw";
 import AppShell from "@/components/app-shell";
+import NoZoom from "@/components/no-zoom";
 
 // The product app is a dark, "Night" theme — different from the waitlist's
 // light theme at /. The .ky-app class (app/globals.css) carries its own
@@ -11,6 +12,10 @@ import AppShell from "@/components/app-shell";
 export const viewport: Viewport = {
   themeColor: "#060E0A",
   viewportFit: "cover",
+  // An app, not a document — no pinch-zoom. See components/no-zoom.tsx for
+  // why this alone isn't enough on iOS.
+  maximumScale: 1,
+  userScalable: false,
 };
 
 // `theme-color` alone (above) only tints the browser chrome in a regular
@@ -33,6 +38,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="ky-app min-h-dvh bg-background font-sans text-foreground antialiased">
       <RegisterSW />
+      <NoZoom />
       <AppShell>{children}</AppShell>
       <Toaster
         theme="dark"
