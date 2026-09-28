@@ -20,8 +20,8 @@ export default function QrCode({ value, size = 176 }: { value: string; size?: nu
   }, [value, size]);
 
   return (
-    <div className="inline-block rounded-2xl bg-white p-3 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.5)]">
-      <canvas ref={ref} width={size} height={size} />
+    <div className="inline-block rounded-[24px] bg-white p-4 shadow-[0_18px_40px_-16px_rgba(0,0,0,0.7)]">
+      <canvas ref={ref} width={size} height={size} className="block" />
     </div>
   );
 }

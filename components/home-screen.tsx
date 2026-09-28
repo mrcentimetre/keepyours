@@ -2,91 +2,192 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import {
+  ArrowDownLeft,
+  ArrowUpFromLine,
+  Bell,
+  ChevronRight,
+  Copy,
+  Lock,
+  Plus,
+  QrCode as QrIcon,
+  Search,
+  Timer,
+  X,
+  Zap,
+} from "lucide-react";
 import { toast } from "sonner";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import { getVaultSettings, DEFAULT_SETTINGS, type VaultSettings } from "@/lib/vault-settings";
-import { getPayments, getKeptBalance, addSimulatedPayment, type Payment } from "@/lib/mock-activity";
-import { SearchIcon, BellIcon, ReceiveIcon, WithdrawIcon, AdvanceIcon, CopyIcon } from "./icons";
-import { Card } from "./ui/card";
+import {
+  getPayments,
+  getKeptBalance,
+  getSpentTotal,
+  addSimulatedPayment,
+  type Payment,
+} from "@/lib/mock-activity";
+import { getPendingWithdrawal, type PendingWithdrawal } from "@/lib/mock-withdrawal";
+import { getOpenAdvance, type Advance } from "@/lib/mock-advance";
+import { formatUsdc, formatCooldownAdj, formatCountdown, shorten, timeAgo } from "@/lib/format";
+import { cn } from "@/lib/utils";
+import { Money, SectionLabel, WalletAvatar } from "./app/screen";
+import { Card, CardRows } from "./ui/card";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Skeleton } from "./ui/skeleton";
-import QrCode from "./qr-code";
+import { Sheet, SheetContent } from "./ui/sheet";
+import GetPaidSheet from "./get-paid-sheet";
 
-function shorten(address: string): string {
-  return `${address.slice(0, 6)}…${address.slice(-4)}`;
-}
-
-function formatUsdc(n: number): string {
-  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function timeAgo(at: number): string {
-  const seconds = Math.max(0, Math.floor((Date.now() - at) / 1000));
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
-}
-
-function ActionButton({
+function HeroAction({
   href,
   onClick,
   icon,
   label,
+  primary,
 }: {
   href?: string;
   onClick?: () => void;
   icon: React.ReactNode;
   label: string;
+  primary?: boolean;
 }) {
-  const content = (
+  const inner = (
     <>
-      <div className="flex size-12 items-center justify-center rounded-full border border-border bg-card transition-colors group-hover:border-secondary group-active:scale-95">
+      <span
+        className={cn(
+          "flex size-14 items-center justify-center rounded-full transition-transform duration-150 group-active:scale-90",
+          primary
+            ? "bg-foreground text-background shadow-[0_10px_24px_-10px_rgba(0,0,0,0.6)]"
+            : "bg-white/12 text-white ring-1 ring-white/20 backdrop-blur-md"
+        )}
+      >
         {icon}
-      </div>
-      <span className="text-[12px] text-muted-foreground">{label}</span>
+      </span>
+      <span className="text-[12px] font-semibold text-white/85">{label}</span>
     </>
   );
-  const className = "group flex flex-col items-center gap-1.5 transition-transform";
-  if (href) {
-    return (
-      <Link href={href} className={className}>
-        {content}
-      </Link>
-    );
-  }
-  return (
+  const className = "group flex flex-col items-center gap-2";
+  return href ? (
+    <Link href={href} className={className}>
+      {inner}
+    </Link>
+  ) : (
     <button type="button" onClick={onClick} className={className}>
-      {content}
+      {inner}
     </button>
+  );
+}
+
+/** Something in progress that deserves the top of the screen — a
+ * withdrawal counting down, an advance open. Amber means waiting
+ * (CLAUDE.md's brand rule), so the withdrawal tile is amber. */
+function StatusTile({
+  href,
+  tone,
+  icon,
+  title,
+  detail,
+}: {
+  href: string;
+  tone: "warning" | "primary";
+  icon: React.ReactNode;
+  title: string;
+  detail: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "flex items-center gap-3 rounded-[20px] p-4 ring-1 transition-transform active:scale-[0.99]",
+        tone === "warning" ? "bg-warning/10 ring-warning/25" : "bg-primary/10 ring-primary/25"
+      )}
+    >
+      <span
+        className={cn(
+          "flex size-10 shrink-0 items-center justify-center rounded-full",
+          tone === "warning" ? "bg-warning/15 text-warning" : "bg-primary/15 text-primary"
+        )}
+      >
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[14px] font-semibold">{title}</span>
+        <span className="block font-mono text-[12px] text-muted-foreground tabular-nums">{detail}</span>
+      </span>
+      <ChevronRight className="size-5 text-muted-foreground" aria-hidden="true" />
+    </Link>
+  );
+}
+
+function SplitTile({
+  label,
+  value,
+  pct,
+  tone,
+}: {
+  label: string;
+  value: number;
+  pct: number;
+  tone: "spend" | "keep";
+}) {
+  return (
+    <Card className="relative overflow-hidden p-4">
+      <span
+        aria-hidden="true"
+        className={cn(
+          "absolute -top-8 -right-8 size-24 rounded-full blur-2xl",
+          tone === "keep" ? "bg-primary/25" : "bg-accent/15"
+        )}
+      />
+      <SectionLabel>{label}</SectionLabel>
+      <Money value={value} className="mt-2 block text-[22px] font-semibold" />
+      <div className="mt-3 flex items-center gap-2">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2">
+          <div
+            className={cn("h-full rounded-full", tone === "keep" ? "bg-primary" : "bg-accent")}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <span className={cn("text-[11px] font-bold", tone === "keep" ? "text-primary" : "text-accent")}>
+          {pct}%
+        </span>
+      </div>
+    </Card>
   );
 }
 
 function HomeSkeleton() {
   return (
-    <main className="flex min-h-dvh flex-col gap-8 p-6 pb-10">
-      <div className="flex items-center justify-between">
-        <Skeleton className="h-5 w-24" />
-        <div className="flex gap-2">
-          <Skeleton className="size-9 rounded-full" />
-          <Skeleton className="size-9 rounded-full" />
+    <main className="flex min-h-dvh flex-col">
+      <div className="rounded-b-[32px] bg-surface-2/60 px-5 pt-[calc(env(safe-area-inset-top)+18px)] pb-7">
+        <div className="flex items-center gap-3">
+          <Skeleton className="size-11 rounded-full" />
+          <div className="flex flex-col gap-1.5">
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-4 w-28" />
+          </div>
+        </div>
+        <div className="mt-8 flex flex-col items-center gap-3">
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-12 w-48" />
+          <Skeleton className="h-7 w-56 rounded-full" />
+        </div>
+        <div className="mt-8 grid grid-cols-4 gap-2">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="flex flex-col items-center gap-2">
+              <Skeleton className="size-14 rounded-full" />
+              <Skeleton className="h-3 w-12" />
+            </div>
+          ))}
         </div>
       </div>
-      <div className="flex flex-col items-center gap-3">
-        <Skeleton className="h-4 w-20" />
-        <Skeleton className="h-11 w-40" />
-        <Skeleton className="h-2.5 w-full max-w-[320px] rounded-full" />
+      <div className="flex flex-col gap-4 px-5 pt-6">
+        <div className="grid grid-cols-2 gap-3">
+          <Skeleton className="h-28" />
+          <Skeleton className="h-28" />
+        </div>
+        <Skeleton className="h-48" />
       </div>
-      <div className="flex justify-around">
-        {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} className="size-12 rounded-full" />
-        ))}
-      </div>
-      <Skeleton className="h-48 w-full rounded-2xl" />
-      <Skeleton className="h-24 w-full rounded-2xl" />
     </main>
   );
 }
@@ -96,13 +197,20 @@ export default function HomeScreen() {
   const [address, setAddress] = useState<string | null>(null);
   const [settings, setSettings] = useState<VaultSettings>(DEFAULT_SETTINGS);
   const [payments, setPayments] = useState<Payment[]>([]);
-  const [copied, setCopied] = useState(false);
+  const [pending, setPending] = useState<PendingWithdrawal | null>(null);
+  const [advance, setAdvance] = useState<Advance | null>(null);
+  const [now, setNow] = useState(Date.now());
+  const [getPaidOpen, setGetPaidOpen] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const qrRef = useRef<HTMLDivElement>(null);
+  const activityRef = useRef<HTMLElement>(null);
 
   function refresh() {
     setPayments(getPayments());
+    setPending(getPendingWithdrawal());
+    setAdvance(getOpenAdvance());
+    setNow(Date.now());
   }
 
   useEffect(() => {
@@ -112,17 +220,24 @@ export default function HomeScreen() {
     refresh();
   }, []);
 
+  // Only tick while there's a countdown on screen.
+  useEffect(() => {
+    if (!pending) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [pending]);
+
   if (!mounted) return <HomeSkeleton />;
 
   const keepPct = Math.round(settings.keepBps / 100);
   const spendPct = 100 - keepPct;
   const kept = getKeptBalance();
+  const spent = getSpentTotal();
 
-  const filteredPayments = query.trim()
+  const q = query.trim();
+  const shown = q
     ? payments.filter((p) =>
-        `${formatUsdc(p.totalUsdc)} ${formatUsdc(p.keptUsdc)} ${formatUsdc(p.spentUsdc)}`.includes(
-          query.trim()
-        )
+        [p.totalUsdc, p.keptUsdc, p.spentUsdc].some((n) => formatUsdc(n).includes(q))
       )
     : payments;
 
@@ -130,130 +245,247 @@ export default function HomeScreen() {
     if (!address) return;
     try {
       await navigator.clipboard.writeText(address);
-      setCopied(true);
       toast.success("Address copied");
-      setTimeout(() => setCopied(false), 1500);
     } catch {
-      toast.error("Couldn't copy — copy it manually instead");
+      toast.error("Couldn't copy — open Get paid and copy it there");
     }
   }
 
   function simulatePayment() {
-    addSimulatedPayment(100, settings.keepBps);
+    const p = addSimulatedPayment(100, settings.keepBps);
     refresh();
-    toast.success("Simulated a $100 test payment");
+    toast.success(`$100 test payment split: $${formatUsdc(p.spentUsdc)} to spend, $${formatUsdc(p.keptUsdc)} kept`);
   }
 
-  function scrollToGetPaid() {
-    qrRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  function toggleSearch() {
+    setSearchOpen((v) => !v);
+    setQuery("");
+    activityRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
+
+  const alerts = [
+    pending && {
+      icon: <Timer className="size-4" />,
+      title: `Withdrawal of $${formatUsdc(pending.amountUsdc)} requested`,
+      at: pending.requestedAt,
+    },
+    advance && {
+      icon: <Zap className="size-4" />,
+      title: `Advance of $${formatUsdc(advance.amountUsdc)} taken`,
+      at: advance.takenAt,
+    },
+  ].filter(Boolean) as { icon: React.ReactNode; title: string; at: number }[];
 
   return (
-    <main className="flex min-h-dvh flex-col gap-8 p-6 pb-10 duration-500 animate-in fade-in slide-in-from-bottom-2">
-      <header className="flex items-center justify-between">
-        <span className="font-display text-[15px] font-bold">Keep Yours</span>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => setSearchOpen((v) => !v)}
-            aria-label="Search activity"
-            className="h-9 w-9 rounded-full border-border bg-card"
-          >
-            <SearchIcon />
-          </Button>
-          <Button asChild variant="outline" size="icon" className="h-9 w-9 rounded-full border-border bg-card">
-            <Link href="/app/settings" aria-label="Notifications">
-              <BellIcon />
-            </Link>
-          </Button>
-        </div>
-      </header>
+    <main className="flex min-h-dvh flex-col duration-300 animate-in fade-in">
+      {/* ── Hero ─────────────────────────────────────────────── */}
+      <section
+        className="relative overflow-hidden rounded-b-[32px] px-5 pt-[calc(env(safe-area-inset-top)+18px)] pb-7 text-white"
+        style={{ background: "var(--hero)" }}
+      >
+        {/* Dot grid whispered into the top-right corner. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-[0.14]"
+          style={{
+            backgroundImage: "radial-gradient(rgba(255,255,255,0.9) 1px, transparent 1.4px)",
+            backgroundSize: "16px 16px",
+            maskImage: "radial-gradient(90% 70% at 100% 0%, #000 0%, transparent 70%)",
+            WebkitMaskImage: "radial-gradient(90% 70% at 100% 0%, #000 0%, transparent 70%)",
+          }}
+        />
 
-      <section className="flex flex-col items-center gap-3 text-center">
-        <p className="text-[13px] text-muted-foreground">Total kept</p>
-        <p className="font-mono text-[44px] font-semibold text-foreground">${formatUsdc(kept)}</p>
-
-        <div className="mt-1 flex w-full max-w-[320px] h-2.5 gap-1 overflow-hidden rounded-full bg-secondary/40">
-          <div className="bg-accent transition-all" style={{ width: `${spendPct}%` }} />
-          <div className="bg-primary transition-all" style={{ width: `${keepPct}%` }} />
-        </div>
-        <div className="flex w-full max-w-[320px] justify-between text-[12px]">
-          <span className="text-accent">Spend {spendPct}%</span>
-          <span className="text-primary">Keep {keepPct}%</span>
-        </div>
-      </section>
-
-      <section className="flex items-start justify-around">
-        <ActionButton onClick={scrollToGetPaid} icon={<ReceiveIcon />} label="Get paid" />
-        <ActionButton href="/app/withdraw" icon={<WithdrawIcon />} label="Withdraw" />
-        <ActionButton href="/app/advance" icon={<AdvanceIcon />} label="Advance" />
-        <ActionButton onClick={copyAddress} icon={<CopyIcon />} label={copied ? "Copied" : "Copy"} />
-      </section>
-
-      <Card ref={qrRef} className="flex flex-col items-center gap-3 p-6 text-center">
-        <h3 className="font-display text-[15px] font-bold">Get paid</h3>
-        {address ? (
-          <>
-            <QrCode value={address} size={140} />
-            <button
-              type="button"
-              onClick={copyAddress}
-              className="font-mono text-[13px] text-muted-foreground underline decoration-border underline-offset-4 hover:text-foreground"
+        <div className="relative flex items-center justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <WalletAvatar address={address} size={44} />
+            <div className="min-w-0">
+              <p className="text-[12px] text-white/65">Welcome back</p>
+              <p className="truncate font-mono text-[14px] font-semibold">
+                {address ? shorten(address) : "Keep Yours"}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="glass" size="icon" className="size-11" onClick={toggleSearch} aria-label="Search activity">
+              <Search />
+            </Button>
+            <Button
+              variant="glass"
+              size="icon"
+              className="relative size-11"
+              onClick={() => setAlertsOpen(true)}
+              aria-label="Notifications"
             >
-              {copied ? "Copied" : shorten(address)}
-            </button>
-          </>
-        ) : (
-          <p className="text-[13px] text-muted-foreground">No wallet address yet.</p>
-        )}
-      </Card>
-
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h3 className="font-display text-[15px] font-bold">Activity</h3>
-          <button
-            type="button"
-            onClick={simulatePayment}
-            className="text-[12px] text-muted-foreground underline decoration-border underline-offset-4 hover:text-foreground"
-          >
-            Simulate a $100 test payment
-          </button>
+              <Bell />
+              {alerts.length > 0 && (
+                <span className="absolute top-2.5 right-2.5 size-2 rounded-full bg-warning ring-2 ring-[#0d4429]" />
+              )}
+            </Button>
+          </div>
         </div>
 
-        {searchOpen && (
-          <Input
-            type="text"
-            autoFocus
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by amount…"
-            className="animate-in fade-in slide-in-from-top-1"
-          />
-        )}
+        <div className="relative mt-8 flex flex-col items-center text-center">
+          <SectionLabel className="text-white/65">Total kept</SectionLabel>
+          <Money value={kept} className="mt-2 text-[48px] leading-none font-semibold" centsClassName="text-[32px]" />
+          <span className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-[12px] font-semibold ring-1 ring-white/20 backdrop-blur-md">
+            <Lock className="size-3.5" aria-hidden="true" />
+            Keeps {keepPct}% · {formatCooldownAdj(settings.cooldownSeconds)} waiting period
+          </span>
+        </div>
 
-        {filteredPayments.length === 0 ? (
-          <Card className="p-4 text-center text-[13px] text-muted-foreground">
-            {payments.length === 0
-              ? "No payments yet. Share your get-paid link above."
-              : "No activity matches that search."}
-          </Card>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {filteredPayments.map((p) => (
-              <Card key={p.id} className="flex items-center justify-between p-4">
-                <div>
-                  <p className="font-mono text-[15px] text-primary">+${formatUsdc(p.totalUsdc)}</p>
-                  <p className="text-[12px] text-muted-foreground">
-                    ${formatUsdc(p.keptUsdc)} kept · ${formatUsdc(p.spentUsdc)} to spend
-                  </p>
-                </div>
-                <span className="text-[12px] text-muted-foreground">{timeAgo(p.at)}</span>
-              </Card>
-            ))}
+        <div className="relative mt-8 grid grid-cols-4 gap-2">
+          <HeroAction primary onClick={() => setGetPaidOpen(true)} icon={<QrIcon className="size-6" />} label="Get paid" />
+          <HeroAction href="/app/withdraw" icon={<ArrowUpFromLine className="size-6" />} label="Withdraw" />
+          <HeroAction href="/app/advance" icon={<Zap className="size-6" />} label="Advance" />
+          <HeroAction onClick={copyAddress} icon={<Copy className="size-6" />} label="Copy" />
+        </div>
+      </section>
+
+      <div className="flex flex-col gap-6 px-5 pt-6">
+        {/* ── In progress ───────────────────────────────────── */}
+        {(pending || advance) && (
+          <div className="flex flex-col gap-3">
+            {pending && (
+              <StatusTile
+                href="/app/withdraw"
+                tone="warning"
+                icon={<Timer className="size-5" />}
+                title="Withdrawal waiting"
+                detail={
+                  now >= pending.releaseAt
+                    ? `$${formatUsdc(pending.amountUsdc)} · ready to send`
+                    : `$${formatUsdc(pending.amountUsdc)} · ${formatCountdown(pending.releaseAt - now)} left`
+                }
+              />
+            )}
+            {advance && (
+              <StatusTile
+                href="/app/advance"
+                tone="primary"
+                icon={<Zap className="size-5" />}
+                title="Advance open"
+                detail={`$${formatUsdc(advance.amountUsdc)} · repaid from your next payment`}
+              />
+            )}
           </div>
         )}
-      </section>
+
+        {/* ── Split ─────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 gap-3">
+          <SplitTile label="To spend" value={spent} pct={spendPct} tone="spend" />
+          <SplitTile label="Kept" value={kept} pct={keepPct} tone="keep" />
+        </div>
+
+        {/* ── Activity ──────────────────────────────────────── */}
+        <section ref={activityRef} className="flex scroll-mt-4 flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-[18px] font-extrabold tracking-[-0.02em]">Activity</h2>
+            <Button variant="secondary" size="sm" onClick={simulatePayment}>
+              <Plus className="size-4" />
+              Test payment
+            </Button>
+          </div>
+
+          {searchOpen && (
+            <div className="relative duration-200 animate-in fade-in slide-in-from-top-1">
+              <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                autoFocus
+                inputMode="decimal"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search by amount"
+                className="pl-11"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchOpen(false);
+                  setQuery("");
+                }}
+                aria-label="Close search"
+                className="absolute top-1/2 right-3 -translate-y-1/2 rounded-full p-1 text-muted-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+          )}
+
+          {payments.length === 0 ? (
+            <Card className="flex flex-col items-center gap-3 px-6 py-9 text-center">
+              <span className="flex size-14 items-center justify-center rounded-full bg-primary/12 text-primary">
+                <QrIcon className="size-6" />
+              </span>
+              <div>
+                <p className="text-[15px] font-semibold">No payments yet</p>
+                <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+                  Share your address with a client. Each payment splits the moment it lands.
+                </p>
+              </div>
+              <Button variant="secondary" size="sm" onClick={() => setGetPaidOpen(true)} className="mt-1">
+                Show my QR
+              </Button>
+            </Card>
+          ) : shown.length === 0 ? (
+            <Card className="px-6 py-8 text-center text-[13px] text-muted-foreground">
+              No payment matches “{q}”.
+            </Card>
+          ) : (
+            <Card>
+              <CardRows>
+                {shown.map((p) => (
+                  <div key={p.id} className="flex items-center gap-3 px-4 py-3.5">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
+                      <ArrowDownLeft className="size-5" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[14px] font-semibold">Payment received</p>
+                      <p className="text-[12px] text-muted-foreground">{timeAgo(p.at, now)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-mono text-[14px] font-semibold tabular-nums">+${formatUsdc(p.totalUsdc)}</p>
+                      <p className="font-mono text-[11.5px] text-primary tabular-nums">${formatUsdc(p.keptUsdc)} kept</p>
+                    </div>
+                  </div>
+                ))}
+              </CardRows>
+            </Card>
+          )}
+        </section>
+      </div>
+
+      <GetPaidSheet open={getPaidOpen} onOpenChange={setGetPaidOpen} address={address} />
+
+      <Sheet open={alertsOpen} onOpenChange={setAlertsOpen}>
+        <SheetContent title="Notifications">
+          {alerts.length === 0 ? (
+            <div className="flex flex-col items-center gap-3 py-6 text-center">
+              <span className="flex size-12 items-center justify-center rounded-full bg-surface-2 text-muted-foreground">
+                <Bell className="size-5" />
+              </span>
+              <p className="text-[13px] leading-relaxed text-muted-foreground">
+                Nothing yet. Withdrawal requests and advances show up here.
+              </p>
+            </div>
+          ) : (
+            <Card className="bg-surface-2/50">
+              <CardRows>
+                {alerts.map((a) => (
+                  <div key={a.title} className="flex items-center gap-3 px-4 py-3.5">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning">
+                      {a.icon}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[14px] font-semibold">{a.title}</p>
+                      <p className="text-[12px] text-muted-foreground">{timeAgo(a.at, now)}</p>
+                    </div>
+                  </div>
+                ))}
+              </CardRows>
+            </Card>
+          )}
+        </SheetContent>
+      </Sheet>
     </main>
   );
 }
