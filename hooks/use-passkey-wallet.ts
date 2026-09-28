@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import type { Address } from "viem";
 import {
   createPasskeyWallet,
   loginPasskeyWallet,
@@ -9,6 +10,7 @@ import {
 } from "@/lib/zerodev";
 
 const HAS_PASSKEY_KEY = "ky_has_passkey";
+const CACHED_ADDRESS_KEY = "ky_wallet_address";
 const PASSKEY_NAME = "Keep Yours";
 
 export type WalletStatus = "idle" | "connecting" | "ready" | "error";
@@ -18,6 +20,23 @@ export function hasExistingPasskey(): boolean {
     return localStorage.getItem(HAS_PASSKEY_KEY) === "1";
   } catch {
     return false;
+  }
+}
+
+/**
+ * The kernel signer itself only ever lives in memory for the tab that just
+ * created/unlocked it — usePasskeyWallet's state resets on every navigation,
+ * by design, since a live signer shouldn't be casually persisted. But the
+ * address alone is public information (E3's screens just need it to
+ * display, e.g. a QR code), so it's cached separately here. Signing a real
+ * transaction later still means calling unlock() again for a live client —
+ * E5's problem, not this one.
+ */
+export function getCachedAddress(): Address | null {
+  try {
+    return localStorage.getItem(CACHED_ADDRESS_KEY) as Address | null;
+  } catch {
+    return null;
   }
 }
 
@@ -38,12 +57,11 @@ export function usePasskeyWallet() {
       setWallet(result);
       setStatus("ready");
       setJustCreated(markCreated);
-      if (markCreated) {
-        try {
-          localStorage.setItem(HAS_PASSKEY_KEY, "1");
-        } catch {
-          // fine without persistence; just re-shows "create" next time
-        }
+      try {
+        if (markCreated) localStorage.setItem(HAS_PASSKEY_KEY, "1");
+        localStorage.setItem(CACHED_ADDRESS_KEY, result.address);
+      } catch {
+        // fine without persistence; just re-shows "create" next time
       }
     } catch (e) {
       setStatus("error");

@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import HomePlaceholder from "@/components/home-placeholder";
+import HomeScreen from "@/components/home-screen";
 
 export const metadata: Metadata = {
   title: "Keep Yours — home",
 };
 
 export default function HomePage() {
-  return <HomePlaceholder />;
+  return <HomeScreen />;
 }
