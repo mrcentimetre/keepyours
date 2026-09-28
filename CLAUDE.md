@@ -34,7 +34,8 @@ Requirements for both: `docs/SUBMISSION.md`.
 - Contracts: Solidity + Foundry, OpenZeppelin, not upgradeable
 - Chain: Arbitrum Sepolia for testing, Arbitrum One for the demo
 - Wallet: ZeroDev passkey smart account + paymaster (also counts as sponsor tech on the Arbitrum form)
-- App: Next.js (App Router) + Tailwind CSS v4 + wagmi/viem, mobile-first PWA
+- App: Next.js (App Router) + TypeScript + Tailwind CSS v4 + wagmi/viem, mobile-first PWA (`@ducanh2912/next-pwa`)
+- Structure: standard shadcn-style layout — root-level `components/`, `lib/`, `hooks/`, `@/*` path alias to repo root, not `src/`
 - Alerts: contract events → Telegram bot
 - Hosting: Vercel, domain keepyours.xyz
 

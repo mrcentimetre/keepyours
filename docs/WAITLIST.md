@@ -4,9 +4,9 @@ The waitlist is the home page of the Next.js app at the repo root.
 
 | File | What it is |
 |---|---|
-| `app/page.jsx` | The page itself (server component) |
-| `app/waitlist-form.jsx` | The email form (client component) |
-| `app/api/waitlist/route.js` | Server route that forwards the email to the sheet |
+| `app/page.tsx` | The page itself (server component) |
+| `components/waitlist-form.tsx` | The email form (client component) |
+| `app/api/waitlist/route.ts` | Server route that forwards the email to the sheet |
 | `app/globals.css` | Tailwind import, brand tokens (`@theme`), page background |
 | `public/` | `logo-128.png`, `logo-256.png`, `apple-icon.png`, `og-banner.png`; originals in `brand/` |
 
@@ -53,8 +53,8 @@ npm run build   # what Vercel runs
 Vercel auto-detects Next.js at the repo root. Root Directory stays `./` — no
 `vercel.json` needed. Point `keepyours.xyz` at it in Vercel → Settings → Domains.
 
-When the app itself is built it goes at `/dashboard` (etc.) in this same
-project; the waitlist stays at `/` until launch.
+The product app lives at `/app` in this same project (see `docs/BUILD-PLAN.md`);
+the waitlist stays at `/` until launch.
 
 ## Rules for this page
 

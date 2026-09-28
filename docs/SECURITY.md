@@ -45,6 +45,8 @@
 - A plain-language user agreement before any real user.
 - No secrets in the repo; `.env.example` lists every key by name only.
 
+**Known, accepted `npm audit` finding:** `@ducanh2912/next-pwa` pulls in a vulnerable `serialize-javascript` transitively, through Workbox's Terser plugin. This only runs during `next build --webpack` (minifying the service worker), never in the browser or on user data, and `npm audit fix --force` would downgrade the PWA plugin to dodge the version range rather than fix anything real — so it's left as is rather than forced.
+
 ## Reporting a problem
 
 Open a GitHub issue, or DM the project account on X. If it's a live vulnerability, please don't post details publicly first.

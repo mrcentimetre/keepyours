@@ -7,8 +7,8 @@ import QRCode from "qrcode";
 // real-world scan reliability across phone camera apps, even though the
 // rest of this page is dark. Generated client-side so it never depends on a
 // third-party QR API being reachable during a review.
-export default function QrCode({ value, size = 176 }) {
-  const ref = useRef(null);
+export default function QrCode({ value, size = 176 }: { value: string; size?: number }) {
+  const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     if (!ref.current || !value) return;

@@ -1,20 +1,23 @@
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-export async function POST(request) {
+export async function POST(request: Request) {
   const endpoint = process.env.WAITLIST_ENDPOINT;
   if (!endpoint) {
     console.error("WAITLIST_ENDPOINT is not set");
     return Response.json({ error: "not configured" }, { status: 500 });
   }
 
-  let body;
+  let body: unknown;
   try {
     body = await request.json();
   } catch {
     return Response.json({ error: "bad request" }, { status: 400 });
   }
 
-  const email = typeof body?.email === "string" ? body.email.trim() : "";
+  const email =
+    typeof body === "object" && body !== null && "email" in body && typeof body.email === "string"
+      ? body.email.trim()
+      : "";
   if (!EMAIL.test(email) || email.length > 254) {
     return Response.json({ error: "invalid email" }, { status: 400 });
   }

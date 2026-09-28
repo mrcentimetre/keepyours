@@ -1,4 +1,4 @@
-import WaitlistForm from "./waitlist-form";
+import WaitlistForm from "@/components/waitlist-form";
 
 const POINTS = [
   { title: "Split on arrival", body: "Set it once. Every payment splits into spend and keep." },

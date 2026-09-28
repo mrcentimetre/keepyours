@@ -1,3 +1,4 @@
+import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
 
@@ -17,15 +18,13 @@ const plex = IBM_Plex_Sans({
 
 const SITE = "https://keepyours.xyz";
 
-export const metadata = {
+export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   title: "Keep Yours — get paid, keep yours",
   description:
     "A savings layer for people paid in crypto. Every USDC payment splits into spend and save. Savings sit behind a cooldown so they can't be traded away, and you can borrow against them before payday.",
   icons: {
-    icon: [
-      { url: "/logo-256.png", sizes: "256x256", type: "image/png" },
-    ],
+    icon: [{ url: "/logo-256.png", sizes: "256x256", type: "image/png" }],
     apple: "/apple-icon.png",
   },
   openGraph: {
@@ -42,12 +41,12 @@ export const metadata = {
   },
 };
 
-export const viewport = {
+export const viewport: Viewport = {
   themeColor: "#F3FAF6",
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${bricolage.variable} ${plex.variable}`}>
       <body className="relative m-0 flex min-h-dvh flex-col bg-transparent font-sans text-ink antialiased">

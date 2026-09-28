@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+type Msg = { text: string; ok: boolean };
 
 export default function WaitlistForm() {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
-  const [msg, setMsg] = useState(null); // {text, ok}
+  const [msg, setMsg] = useState<Msg | null>(null);
 
-  async function onSubmit(e) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const value = email.trim();
 
@@ -71,9 +73,7 @@ export default function WaitlistForm() {
         <div
           role="status"
           aria-live="polite"
-          className={
-            "mt-3.5 text-sm " + (msg.ok ? "font-medium text-green-deep" : "text-[#b23a3a]")
-          }
+          className={"mt-3.5 text-sm " + (msg.ok ? "font-medium text-green-deep" : "text-[#b23a3a]")}
         >
           {msg.text}
         </div>

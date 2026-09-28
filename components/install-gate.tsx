@@ -5,7 +5,15 @@ import QrCode from "./qr-code";
 
 const BYPASS_KEY = "ky_continue_in_browser";
 
-function detectPlatform() {
+type Platform = "ios" | "android" | "other-mobile" | "desktop";
+
+// Not in lib.dom.d.ts: beforeinstallprompt is a non-standard, Chromium-only event.
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
+function detectPlatform(): Platform {
   const ua = navigator.userAgent || "";
   const isIOS =
     /iPad|iPhone|iPod/.test(ua) ||
@@ -16,10 +24,10 @@ function detectPlatform() {
   return "desktop";
 }
 
-function detectStandalone() {
+function detectStandalone(): boolean {
   return (
     window.matchMedia?.("(display-mode: standalone)").matches ||
-    window.navigator.standalone === true // iOS Safari
+    (window.navigator as Navigator & { standalone?: boolean }).standalone === true // iOS Safari
   );
 }
 
@@ -30,7 +38,7 @@ function Logo() {
   );
 }
 
-function ContinueInBrowser({ onContinue }) {
+function ContinueInBrowser({ onContinue }: { onContinue: () => void }) {
   return (
     <button
       type="button"
@@ -70,13 +78,19 @@ function IosSteps() {
   );
 }
 
-function AndroidSteps({ deferredPrompt, onInstalled }) {
+function AndroidSteps({
+  deferredPrompt,
+  onInstalled,
+}: {
+  deferredPrompt: BeforeInstallPromptEvent | null;
+  onInstalled: () => void;
+}) {
   const [installing, setInstalling] = useState(false);
 
   async function install() {
     if (!deferredPrompt) return;
     setInstalling(true);
-    deferredPrompt.prompt();
+    await deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     setInstalling(false);
     if (outcome === "accepted") onInstalled();
@@ -113,7 +127,7 @@ function OtherMobileSteps() {
   );
 }
 
-function DesktopGate({ url, onContinue }) {
+function DesktopGate({ url, onContinue }: { url: string; onContinue: () => void }) {
   return (
     <div className="flex flex-col items-center gap-5 text-center">
       <QrCode value={url} />
@@ -129,8 +143,8 @@ export default function InstallGate() {
   const [mounted, setMounted] = useState(false);
   const [standalone, setStandalone] = useState(false);
   const [bypassed, setBypassed] = useState(false);
-  const [platform, setPlatform] = useState("desktop");
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [platform, setPlatform] = useState<Platform>("desktop");
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [url, setUrl] = useState("");
 
   useEffect(() => {
@@ -144,9 +158,9 @@ export default function InstallGate() {
       // private-mode storage can throw; default to not bypassed
     }
 
-    const onPrompt = (e) => {
+    const onPrompt = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e);
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
     };
     window.addEventListener("beforeinstallprompt", onPrompt);
     return () => window.removeEventListener("beforeinstallprompt", onPrompt);
