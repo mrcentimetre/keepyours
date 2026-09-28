@@ -4,6 +4,8 @@ Written 27 Sep 2026, on the `dev` branch. This plans everything left before the 
 
 One task = up to **8 hours = one solo dev-day**. Where a day holds two tasks, they're each half a day.
 
+**Stack correction, 28 Sep 2026:** the app is TypeScript, not JavaScript, in the standard shadcn-style structure (root `components/`, `lib/`, `hooks/`, `@/*` alias), and PWA support runs through `@ducanh2912/next-pwa` rather than a hand-rolled service worker — matching a proven earlier PWA build. T0.1 and T1.1's original JS work was migrated in place; every task from here on is written in TS from the start. See `docs/ARCHITECTURE.md`'s Pieces table.
+
 ## Capacity check
 
 | | |
