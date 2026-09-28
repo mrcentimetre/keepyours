@@ -1,18 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import { getVaultSettings, DEFAULT_SETTINGS, type VaultSettings } from "@/lib/vault-settings";
 import { getPayments, getKeptBalance, addSimulatedPayment, type Payment } from "@/lib/mock-activity";
+import { SearchIcon, BellIcon, ReceiveIcon, WithdrawIcon, AdvanceIcon, CopyIcon } from "./icons";
 import QrCode from "./qr-code";
-
-function Logo() {
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src="/logo-128.png" alt="" width={32} height={32} className="block" />
-  );
-}
 
 function shorten(address: string): string {
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
@@ -32,12 +26,49 @@ function timeAgo(at: number): string {
   return `${Math.floor(hours / 24)}d ago`;
 }
 
+function ActionButton({
+  href,
+  onClick,
+  icon,
+  label,
+}: {
+  href?: string;
+  onClick?: () => void;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  const content = (
+    <>
+      <div className="flex size-12 items-center justify-center rounded-full border border-[#1E3428] bg-[#12211A]">
+        {icon}
+      </div>
+      <span className="text-[12px] text-[#8CA497]">{label}</span>
+    </>
+  );
+  const className = "flex flex-col items-center gap-1.5";
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {content}
+      </Link>
+    );
+  }
+  return (
+    <button type="button" onClick={onClick} className={className}>
+      {content}
+    </button>
+  );
+}
+
 export default function HomeScreen() {
   const [mounted, setMounted] = useState(false);
   const [address, setAddress] = useState<string | null>(null);
   const [settings, setSettings] = useState<VaultSettings>(DEFAULT_SETTINGS);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [copied, setCopied] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const qrRef = useRef<HTMLDivElement>(null);
 
   function refresh() {
     setPayments(getPayments());
@@ -56,6 +87,14 @@ export default function HomeScreen() {
   const spendPct = 100 - keepPct;
   const kept = getKeptBalance();
 
+  const filteredPayments = query.trim()
+    ? payments.filter((p) =>
+        `${formatUsdc(p.totalUsdc)} ${formatUsdc(p.keptUsdc)} ${formatUsdc(p.spentUsdc)}`.includes(
+          query.trim()
+        )
+      )
+    : payments;
+
   async function copyAddress() {
     if (!address) return;
     try {
@@ -72,11 +111,31 @@ export default function HomeScreen() {
     refresh();
   }
 
+  function scrollToGetPaid() {
+    qrRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
   return (
     <main className="flex min-h-dvh flex-col gap-8 p-6 pb-10">
-      <header className="flex items-center gap-2">
-        <Logo />
+      <header className="flex items-center justify-between">
         <span className="font-display text-[15px] font-bold">Keep Yours</span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setSearchOpen((v) => !v)}
+            aria-label="Search activity"
+            className="flex size-9 items-center justify-center rounded-full border border-[#1E3428] bg-[#12211A]"
+          >
+            <SearchIcon />
+          </button>
+          <Link
+            href="/app/settings"
+            aria-label="Notifications"
+            className="flex size-9 items-center justify-center rounded-full border border-[#1E3428] bg-[#12211A]"
+          >
+            <BellIcon />
+          </Link>
+        </div>
       </header>
 
       <section className="flex flex-col items-center gap-3 text-center">
@@ -93,7 +152,17 @@ export default function HomeScreen() {
         </div>
       </section>
 
-      <section className="flex flex-col items-center gap-3 rounded-[24px] border border-[#1E3428] bg-[#12211A] p-6 text-center">
+      <section className="flex items-start justify-around">
+        <ActionButton onClick={scrollToGetPaid} icon={<ReceiveIcon />} label="Get paid" />
+        <ActionButton href="/app/withdraw" icon={<WithdrawIcon />} label="Withdraw" />
+        <ActionButton href="/app/advance" icon={<AdvanceIcon />} label="Advance" />
+        <ActionButton onClick={copyAddress} icon={<CopyIcon />} label={copied ? "Copied" : "Copy"} />
+      </section>
+
+      <section
+        ref={qrRef}
+        className="flex flex-col items-center gap-3 rounded-[24px] border border-[#1E3428] bg-[#12211A] p-6 text-center"
+      >
         <h3 className="font-display text-[15px] font-bold">Get paid</h3>
         {address ? (
           <>
@@ -123,13 +192,26 @@ export default function HomeScreen() {
           </button>
         </div>
 
-        {payments.length === 0 ? (
+        {searchOpen && (
+          <input
+            type="text"
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by amount…"
+            className="rounded-[14px] border border-[#1E3428] bg-[#12211A] px-4 py-2.5 text-[14px] text-[#EAF5EF] outline-none placeholder:text-[#8CA497] focus:border-[#2C4A3B]"
+          />
+        )}
+
+        {filteredPayments.length === 0 ? (
           <p className="rounded-[18px] border border-[#1E3428] p-4 text-center text-[13px] text-[#8CA497]">
-            No payments yet. Share your get-paid link above.
+            {payments.length === 0
+              ? "No payments yet. Share your get-paid link above."
+              : "No activity matches that search."}
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
-            {payments.map((p) => (
+            {filteredPayments.map((p) => (
               <li
                 key={p.id}
                 className="flex items-center justify-between rounded-[18px] border border-[#1E3428] bg-[#12211A] p-4"
@@ -146,21 +228,6 @@ export default function HomeScreen() {
           </ul>
         )}
       </section>
-
-      <nav className="mt-auto grid grid-cols-2 gap-3">
-        <Link
-          href="/app/withdraw"
-          className="rounded-full border border-[#1E3428] py-3 text-center text-[14px] font-semibold text-[#EAF5EF] hover:border-[#2C4A3B]"
-        >
-          Withdraw
-        </Link>
-        <Link
-          href="/app/advance"
-          className="rounded-full border border-[#1E3428] py-3 text-center text-[14px] font-semibold text-[#EAF5EF] hover:border-[#2C4A3B]"
-        >
-          Advance
-        </Link>
-      </nav>
     </main>
   );
 }
