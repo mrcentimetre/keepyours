@@ -2,10 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import { getVaultSettings, DEFAULT_SETTINGS, type VaultSettings } from "@/lib/vault-settings";
 import { getPayments, getKeptBalance, addSimulatedPayment, type Payment } from "@/lib/mock-activity";
 import { SearchIcon, BellIcon, ReceiveIcon, WithdrawIcon, AdvanceIcon, CopyIcon } from "./icons";
+import { Card } from "./ui/card";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Skeleton } from "./ui/skeleton";
 import QrCode from "./qr-code";
 
 function shorten(address: string): string {
@@ -39,13 +44,13 @@ function ActionButton({
 }) {
   const content = (
     <>
-      <div className="flex size-12 items-center justify-center rounded-full border border-[#1E3428] bg-[#12211A]">
+      <div className="flex size-12 items-center justify-center rounded-full border border-border bg-card transition-colors group-hover:border-secondary group-active:scale-95">
         {icon}
       </div>
-      <span className="text-[12px] text-[#8CA497]">{label}</span>
+      <span className="text-[12px] text-muted-foreground">{label}</span>
     </>
   );
-  const className = "flex flex-col items-center gap-1.5";
+  const className = "group flex flex-col items-center gap-1.5 transition-transform";
   if (href) {
     return (
       <Link href={href} className={className}>
@@ -57,6 +62,32 @@ function ActionButton({
     <button type="button" onClick={onClick} className={className}>
       {content}
     </button>
+  );
+}
+
+function HomeSkeleton() {
+  return (
+    <main className="flex min-h-dvh flex-col gap-8 p-6 pb-10">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-5 w-24" />
+        <div className="flex gap-2">
+          <Skeleton className="size-9 rounded-full" />
+          <Skeleton className="size-9 rounded-full" />
+        </div>
+      </div>
+      <div className="flex flex-col items-center gap-3">
+        <Skeleton className="h-4 w-20" />
+        <Skeleton className="h-11 w-40" />
+        <Skeleton className="h-2.5 w-full max-w-[320px] rounded-full" />
+      </div>
+      <div className="flex justify-around">
+        {[0, 1, 2, 3].map((i) => (
+          <Skeleton key={i} className="size-12 rounded-full" />
+        ))}
+      </div>
+      <Skeleton className="h-48 w-full rounded-2xl" />
+      <Skeleton className="h-24 w-full rounded-2xl" />
+    </main>
   );
 }
 
@@ -81,7 +112,7 @@ export default function HomeScreen() {
     refresh();
   }, []);
 
-  if (!mounted) return null;
+  if (!mounted) return <HomeSkeleton />;
 
   const keepPct = Math.round(settings.keepBps / 100);
   const spendPct = 100 - keepPct;
@@ -100,15 +131,17 @@ export default function HomeScreen() {
     try {
       await navigator.clipboard.writeText(address);
       setCopied(true);
+      toast.success("Address copied");
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      // clipboard can be blocked (permissions, non-HTTPS); no harm done
+      toast.error("Couldn't copy — copy it manually instead");
     }
   }
 
   function simulatePayment() {
     addSimulatedPayment(100, settings.keepBps);
     refresh();
+    toast.success("Simulated a $100 test payment");
   }
 
   function scrollToGetPaid() {
@@ -116,39 +149,38 @@ export default function HomeScreen() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col gap-8 p-6 pb-10">
+    <main className="flex min-h-dvh flex-col gap-8 p-6 pb-10 duration-500 animate-in fade-in slide-in-from-bottom-2">
       <header className="flex items-center justify-between">
         <span className="font-display text-[15px] font-bold">Keep Yours</span>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
+          <Button
+            variant="outline"
+            size="icon"
             onClick={() => setSearchOpen((v) => !v)}
             aria-label="Search activity"
-            className="flex size-9 items-center justify-center rounded-full border border-[#1E3428] bg-[#12211A]"
+            className="h-9 w-9 rounded-full border-border bg-card"
           >
             <SearchIcon />
-          </button>
-          <Link
-            href="/app/settings"
-            aria-label="Notifications"
-            className="flex size-9 items-center justify-center rounded-full border border-[#1E3428] bg-[#12211A]"
-          >
-            <BellIcon />
-          </Link>
+          </Button>
+          <Button asChild variant="outline" size="icon" className="h-9 w-9 rounded-full border-border bg-card">
+            <Link href="/app/settings" aria-label="Notifications">
+              <BellIcon />
+            </Link>
+          </Button>
         </div>
       </header>
 
       <section className="flex flex-col items-center gap-3 text-center">
-        <p className="text-[13px] text-[#8CA497]">Total kept</p>
-        <p className="font-mono text-[44px] font-semibold text-[#EAF5EF]">${formatUsdc(kept)}</p>
+        <p className="text-[13px] text-muted-foreground">Total kept</p>
+        <p className="font-mono text-[44px] font-semibold text-foreground">${formatUsdc(kept)}</p>
 
-        <div className="mt-1 flex w-full max-w-[320px] h-2.5 gap-1 overflow-hidden rounded-full">
-          <div className="bg-[#62E6A0]" style={{ width: `${spendPct}%` }} />
-          <div className="bg-[#16B862]" style={{ width: `${keepPct}%` }} />
+        <div className="mt-1 flex w-full max-w-[320px] h-2.5 gap-1 overflow-hidden rounded-full bg-secondary/40">
+          <div className="bg-accent transition-all" style={{ width: `${spendPct}%` }} />
+          <div className="bg-primary transition-all" style={{ width: `${keepPct}%` }} />
         </div>
         <div className="flex w-full max-w-[320px] justify-between text-[12px]">
-          <span className="text-[#62E6A0]">Spend {spendPct}%</span>
-          <span className="text-[#16B862]">Keep {keepPct}%</span>
+          <span className="text-accent">Spend {spendPct}%</span>
+          <span className="text-primary">Keep {keepPct}%</span>
         </div>
       </section>
 
@@ -159,10 +191,7 @@ export default function HomeScreen() {
         <ActionButton onClick={copyAddress} icon={<CopyIcon />} label={copied ? "Copied" : "Copy"} />
       </section>
 
-      <section
-        ref={qrRef}
-        className="flex flex-col items-center gap-3 rounded-[24px] border border-[#1E3428] bg-[#12211A] p-6 text-center"
-      >
+      <Card ref={qrRef} className="flex flex-col items-center gap-3 p-6 text-center">
         <h3 className="font-display text-[15px] font-bold">Get paid</h3>
         {address ? (
           <>
@@ -170,15 +199,15 @@ export default function HomeScreen() {
             <button
               type="button"
               onClick={copyAddress}
-              className="font-mono text-[13px] text-[#8CA497] underline decoration-[#2C4A3B] underline-offset-4 hover:text-[#BFD8C9]"
+              className="font-mono text-[13px] text-muted-foreground underline decoration-border underline-offset-4 hover:text-foreground"
             >
               {copied ? "Copied" : shorten(address)}
             </button>
           </>
         ) : (
-          <p className="text-[13px] text-[#8CA497]">No wallet address yet.</p>
+          <p className="text-[13px] text-muted-foreground">No wallet address yet.</p>
         )}
-      </section>
+      </Card>
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
@@ -186,46 +215,43 @@ export default function HomeScreen() {
           <button
             type="button"
             onClick={simulatePayment}
-            className="text-[12px] text-[#8CA497] underline decoration-[#2C4A3B] underline-offset-4 hover:text-[#BFD8C9]"
+            className="text-[12px] text-muted-foreground underline decoration-border underline-offset-4 hover:text-foreground"
           >
             Simulate a $100 test payment
           </button>
         </div>
 
         {searchOpen && (
-          <input
+          <Input
             type="text"
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by amount…"
-            className="rounded-[14px] border border-[#1E3428] bg-[#12211A] px-4 py-2.5 text-[14px] text-[#EAF5EF] outline-none placeholder:text-[#8CA497] focus:border-[#2C4A3B]"
+            className="animate-in fade-in slide-in-from-top-1"
           />
         )}
 
         {filteredPayments.length === 0 ? (
-          <p className="rounded-[18px] border border-[#1E3428] p-4 text-center text-[13px] text-[#8CA497]">
+          <Card className="p-4 text-center text-[13px] text-muted-foreground">
             {payments.length === 0
               ? "No payments yet. Share your get-paid link above."
               : "No activity matches that search."}
-          </p>
+          </Card>
         ) : (
-          <ul className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2">
             {filteredPayments.map((p) => (
-              <li
-                key={p.id}
-                className="flex items-center justify-between rounded-[18px] border border-[#1E3428] bg-[#12211A] p-4"
-              >
+              <Card key={p.id} className="flex items-center justify-between p-4">
                 <div>
-                  <p className="font-mono text-[15px] text-[#62E6A0]">+${formatUsdc(p.totalUsdc)}</p>
-                  <p className="text-[12px] text-[#8CA497]">
+                  <p className="font-mono text-[15px] text-primary">+${formatUsdc(p.totalUsdc)}</p>
+                  <p className="text-[12px] text-muted-foreground">
                     ${formatUsdc(p.keptUsdc)} kept · ${formatUsdc(p.spentUsdc)} to spend
                   </p>
                 </div>
-                <span className="text-[12px] text-[#8CA497]">{timeAgo(p.at)}</span>
-              </li>
+                <span className="text-[12px] text-muted-foreground">{timeAgo(p.at)}</span>
+              </Card>
             ))}
-          </ul>
+          </div>
         )}
       </section>
     </main>

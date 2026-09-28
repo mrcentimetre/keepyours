@@ -1,6 +1,7 @@
 "use client";
 
 import { BackspaceIcon } from "./icons";
+import { Button } from "./ui/button";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "back"] as const;
 
@@ -55,7 +56,7 @@ export default function AmountKeypad({
               key={p.label}
               type="button"
               onClick={() => onChange(String(p.value))}
-              className="shrink-0 rounded-full border border-[#1E3428] bg-[#12211A] px-4 py-1.5 text-[13px] text-[#BFD8C9] hover:border-[#2C4A3B]"
+              className="shrink-0 rounded-full border border-border bg-card px-4 py-1.5 text-[13px] text-foreground/80 transition-colors hover:border-secondary active:scale-95"
             >
               {p.label}
             </button>
@@ -71,7 +72,7 @@ export default function AmountKeypad({
               type="button"
               onClick={backspace}
               aria-label="Backspace"
-              className="flex items-center justify-center rounded-2xl bg-[#12211A] py-4 text-[#FF7070] active:bg-[#1E3428]"
+              className="flex items-center justify-center rounded-2xl bg-card py-4 text-destructive transition-colors active:scale-95 active:bg-secondary"
             >
               <BackspaceIcon />
             </button>
@@ -80,7 +81,7 @@ export default function AmountKeypad({
               key={k}
               type="button"
               onClick={() => pressDigit(k)}
-              className="rounded-2xl bg-[#12211A] py-4 font-mono text-[20px] text-[#EAF5EF] active:bg-[#1E3428]"
+              className="rounded-2xl bg-card py-4 font-mono text-[20px] text-foreground transition-colors active:scale-95 active:bg-secondary"
             >
               {k}
             </button>
@@ -88,14 +89,9 @@ export default function AmountKeypad({
         )}
       </div>
 
-      <button
-        type="button"
-        onClick={onConfirm}
-        disabled={confirmDisabled}
-        className="rounded-full bg-gradient-to-r from-[#16B862] to-[#62E6A0] py-3.5 text-[15px] font-semibold text-[#03170C] disabled:opacity-40"
-      >
+      <Button onClick={onConfirm} disabled={confirmDisabled} className="w-full">
         {confirmLabel}
-      </button>
+      </Button>
     </div>
   );
 }

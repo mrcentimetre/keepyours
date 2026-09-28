@@ -14,6 +14,10 @@ import {
   type Advance,
 } from "@/lib/mock-advance";
 import AmountKeypad, { type AmountPreset } from "./amount-keypad";
+import { Card } from "./ui/card";
+import { Button } from "./ui/button";
+import { Skeleton } from "./ui/skeleton";
+import { Badge } from "./ui/badge";
 
 function formatUsdc(n: number): string {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -25,6 +29,18 @@ function round2(n: number): number {
 
 function daysElapsed(takenAt: number, now: number): number {
   return Math.max(0, Math.floor((now - takenAt) / (24 * 60 * 60 * 1000)));
+}
+
+function AdvanceSkeleton() {
+  return (
+    <main className="flex min-h-dvh flex-col gap-6 p-6 pb-10">
+      <Skeleton className="h-7 w-28" />
+      <Skeleton className="mx-auto h-4 w-56" />
+      <Skeleton className="mx-auto h-12 w-32" />
+      <Skeleton className="h-24 w-full rounded-2xl" />
+      <Skeleton className="h-56 w-full rounded-2xl" />
+    </main>
+  );
 }
 
 export default function AdvanceScreen() {
@@ -58,7 +74,7 @@ export default function AdvanceScreen() {
     return () => clearInterval(id);
   }, [advance]);
 
-  if (!mounted) return null;
+  if (!mounted) return <AdvanceSkeleton />;
 
   const max = getMaxAdvance();
   const value = Number(amount);
@@ -88,37 +104,32 @@ export default function AdvanceScreen() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col gap-6 p-6 pb-10">
+    <main className="flex min-h-dvh flex-col gap-6 p-6 pb-10 duration-500 animate-in fade-in slide-in-from-bottom-2">
       <h1 className="font-display text-[22px] font-bold">Advance</h1>
 
       {!advance ? (
         step === "amount" ? (
           <section className="flex flex-col gap-5">
-            <p className="text-center text-[13px] text-[#8CA497]">
-              Up to 50% of savings:{" "}
-              <span className="text-[#EAF5EF]">${formatUsdc(max)}</span>
+            <p className="text-center text-[13px] text-muted-foreground">
+              Up to 50% of savings: <span className="text-foreground">${formatUsdc(max)}</span>
               <br />
               from the advance pool, never other users&apos; savings
             </p>
 
             <div className="flex items-center justify-center gap-1 py-2 text-center">
-              <p className="font-mono text-[40px] font-semibold text-[#EAF5EF]">
-                ${amount || "0"}
-              </p>
-              <span className="h-[34px] w-[2px] animate-pulse bg-[#62E6A0]" aria-hidden="true" />
+              <p className="font-mono text-[40px] font-semibold text-foreground">${amount || "0"}</p>
+              <span className="h-[34px] w-[2px] animate-pulse bg-primary" aria-hidden="true" />
             </div>
 
-            <div className="flex flex-col gap-2 rounded-[18px] border border-[#1E3428] p-4">
-              <p className="text-[12px] text-[#8CA497]">Fee if not repaid before your next payment</p>
+            <Card className="flex flex-col gap-2 p-4">
+              <p className="text-[12px] text-muted-foreground">Fee if not repaid before your next payment</p>
               {FEE_TIERS.map((tier) => (
                 <div key={tier.label} className="flex items-center justify-between text-[13px]">
-                  <span className="text-[#8CA497]">{tier.rangeLabel}</span>
-                  <span className={tier.bps === 0 ? "text-[#62E6A0]" : "text-[#EAF5EF]"}>
-                    {tier.label}
-                  </span>
+                  <span className="text-muted-foreground">{tier.rangeLabel}</span>
+                  <span className={tier.bps === 0 ? "text-primary" : "text-foreground"}>{tier.label}</span>
                 </div>
               ))}
-            </div>
+            </Card>
 
             <AmountKeypad
               value={amount}
@@ -131,71 +142,59 @@ export default function AdvanceScreen() {
           </section>
         ) : (
           <section className="flex flex-col gap-5">
-            <div className="flex flex-col items-center gap-1 rounded-[24px] border border-[#1E3428] bg-[#12211A] p-6 text-center">
-              <p className="text-[13px] text-[#8CA497]">You&apos;ll receive</p>
-              <p className="font-mono text-[32px] font-semibold text-[#EAF5EF]">
-                ${formatUsdc(value)}
-              </p>
-              <p className="text-[12px] text-[#8CA497]">to your spending balance, right away</p>
-            </div>
+            <Card className="flex flex-col items-center gap-1 p-6 text-center">
+              <p className="text-[13px] text-muted-foreground">You&apos;ll receive</p>
+              <p className="font-mono text-[32px] font-semibold text-foreground">${formatUsdc(value)}</p>
+              <p className="text-[12px] text-muted-foreground">to your spending balance, right away</p>
+            </Card>
 
-            <div className="flex flex-col gap-2 rounded-[18px] border border-[#1E3428] p-4 text-[13px]">
+            <Card className="flex flex-col gap-2 p-4 text-[13px]">
               <div className="flex justify-between">
-                <span className="text-[#8CA497]">Fee today</span>
-                <span className="text-[#62E6A0]">Free</span>
+                <span className="text-muted-foreground">Fee today</span>
+                <span className="text-primary">Free</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#8CA497]">Repayment</span>
-                <span className="text-[#EAF5EF]">Automatic, from your next payment</span>
+                <span className="text-muted-foreground">Repayment</span>
+                <span className="text-foreground">Automatic, from your next payment</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-[#8CA497]">Your savings</span>
-                <span className="text-[#EAF5EF]">Stay locked as security until repaid</span>
+                <span className="text-muted-foreground">Your savings</span>
+                <span className="text-foreground">Stay locked as security until repaid</span>
               </div>
-            </div>
+            </Card>
 
-            <button
-              type="button"
-              onClick={handleConfirm}
-              className="rounded-full bg-gradient-to-r from-[#16B862] to-[#62E6A0] py-3.5 text-[15px] font-semibold text-[#03170C]"
-            >
-              Confirm advance
-            </button>
-            <button
-              type="button"
-              onClick={() => setStep("amount")}
-              className="text-[13px] text-[#8CA497] underline decoration-[#2C4A3B] underline-offset-4 hover:text-[#BFD8C9]"
-            >
+            <Button onClick={handleConfirm}>Confirm advance</Button>
+            <Button variant="link" onClick={() => setStep("amount")}>
               Back
-            </button>
+            </Button>
           </section>
         )
       ) : (
         <section className="flex flex-col items-center gap-5">
-          <div className="flex w-full flex-col items-center gap-2 rounded-[24px] border border-[#1E3428] bg-[#12211A] p-6 text-center">
-            <p className="text-[13px] text-[#8CA497]">Open advance</p>
-            <p className="font-mono text-[32px] font-semibold text-[#EAF5EF]">
+          <Card className="flex w-full flex-col items-center gap-2 p-6 text-center">
+            <p className="text-[13px] text-muted-foreground">Open advance</p>
+            <p className="font-mono text-[32px] font-semibold text-foreground">
               ${formatUsdc(advance.amountUsdc)}
             </p>
-            <p className="text-[12px] text-[#8CA497]">
+            <p className="text-[12px] text-muted-foreground">
               taken {daysElapsed(advance.takenAt, now)} day{daysElapsed(advance.takenAt, now) === 1 ? "" : "s"} ago
             </p>
-          </div>
+          </Card>
 
-          <div
-            className={`flex w-full flex-col items-center gap-2 rounded-[24px] border p-6 text-center ${
-              isOverdue(advance.takenAt, now)
-                ? "border-[#FF7070]/30 bg-[#FF7070]/10"
-                : "border-[#F4B545]/30 bg-[#F4B545]/10"
-            }`}
+          <Card
+            className={
+              "flex w-full flex-col items-center gap-2 p-6 text-center " +
+              (isOverdue(advance.takenAt, now) ? "border-destructive/30 bg-destructive/10" : "border-warning/30 bg-warning/10")
+            }
           >
-            <p className={`text-[13px] ${isOverdue(advance.takenAt, now) ? "text-[#FF7070]" : "text-[#F4B545]"}`}>
+            <Badge variant={isOverdue(advance.takenAt, now) ? "destructive" : "warning"}>
               {isOverdue(advance.takenAt, now) ? "Overdue" : "Fee if settled today"}
-            </p>
+            </Badge>
             <p
-              className={`font-mono text-[28px] font-semibold ${
-                isOverdue(advance.takenAt, now) ? "text-[#FF7070]" : "text-[#F4B545]"
-              }`}
+              className={
+                "font-mono text-[28px] font-semibold " +
+                (isOverdue(advance.takenAt, now) ? "text-destructive" : "text-warning")
+              }
             >
               {getFeeBps(advance.takenAt, now) === 0
                 ? "Free"
@@ -203,20 +202,16 @@ export default function AdvanceScreen() {
                     getFeeOwed(advance, now)
                   )}`}
             </p>
-            <p className="text-[12px] text-[#8CA497]">
+            <p className="text-[12px] text-muted-foreground">
               {isOverdue(advance.takenAt, now)
                 ? "Past 90 days — settleable from your savings."
                 : "Repaid automatically, before the split, on your next payment."}
             </p>
-          </div>
+          </Card>
 
-          <button
-            type="button"
-            onClick={handleRepay}
-            className="w-full rounded-full border border-[#1E3428] py-3.5 text-[15px] font-semibold text-[#EAF5EF] hover:border-[#2C4A3B]"
-          >
+          <Button onClick={handleRepay} variant="outline" className="w-full">
             Repay now (simulate)
-          </button>
+          </Button>
         </section>
       )}
     </main>

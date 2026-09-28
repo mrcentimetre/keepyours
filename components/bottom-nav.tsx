@@ -16,20 +16,19 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-[#1E3428] bg-[#0A160F]/95 backdrop-blur"
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/80 backdrop-blur-xl"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="mx-auto flex max-w-[480px] items-center justify-around px-2 py-2">
         {TABS.map(({ href, label, Icon }) => {
           const active = pathname === href;
           return (
-            <Link
-              key={href}
-              href={href}
-              className="flex flex-col items-center gap-1 rounded-xl px-4 py-1.5"
-            >
+            <Link key={href} href={href} className="relative flex flex-col items-center gap-1 px-4 py-1.5">
+              {active && (
+                <span className="absolute -top-2 h-1 w-6 rounded-full bg-primary" aria-hidden="true" />
+              )}
               <Icon active={active} />
-              <span className={`text-[11px] ${active ? "text-[#62E6A0]" : "text-[#8CA497]"}`}>
+              <span className={`text-[11px] transition-colors ${active ? "font-medium text-primary" : "text-muted-foreground"}`}>
                 {label}
               </span>
             </Link>
