@@ -8,6 +8,7 @@ import {
   isZeroDevConfigured,
   type PasskeyWallet,
 } from "@/lib/zerodev";
+import { setProfileName } from "./use-profile-name";
 
 const HAS_PASSKEY_KEY = "ky_has_passkey";
 const CACHED_ADDRESS_KEY = "ky_wallet_address";
@@ -43,6 +44,22 @@ export function getCachedAddress(): Address | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Sign out of this phone: forget the cached address and the display name,
+ * so the app goes back to the sign-in screen. The passkey itself stays in
+ * the phone's keychain (only the person can delete that, in Settings →
+ * Passwords), and HAS_PASSKEY_KEY stays too, so the gate offers "Sign in
+ * with your passkey" rather than "Create a wallet". Funds are untouched —
+ * they're on-chain, tied to the passkey, not to this app's storage.
+ */
+export function signOut() {
+  try {
+    localStorage.removeItem(CACHED_ADDRESS_KEY);
+    localStorage.setItem(HAS_PASSKEY_KEY, "1");
+  } catch {}
+  setProfileName("");
 }
 
 export function usePasskeyWallet() {

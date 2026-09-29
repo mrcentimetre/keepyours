@@ -1,6 +1,8 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import BottomNav from "./bottom-nav";
 
 // Only the four tab-bar screens get the nav — not the install gate, wallet
@@ -10,7 +12,14 @@ const NAV_ROUTES = ["/app/home", "/app/withdraw", "/app/advance", "/app/settings
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const showNav = NAV_ROUTES.includes(pathname ?? "");
+
+  // Signed out (no wallet on this phone): the tab screens have nothing to
+  // show, so back to the sign-in gate — e.g. pressing Back after Sign out.
+  useEffect(() => {
+    if (showNav && !getCachedAddress()) router.replace("/app");
+  }, [showNav, router]);
 
   return (
     <>

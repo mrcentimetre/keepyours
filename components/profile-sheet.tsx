@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Copy, Fingerprint, Globe } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Check, Copy, Fingerprint, Globe, LogOut } from "lucide-react";
 import { toast } from "sonner";
+import { signOut } from "@/hooks/use-passkey-wallet";
 import { MAX_NAME_LENGTH, setProfileName, useProfileName } from "@/hooks/use-profile-name";
 import { shorten } from "@/lib/format";
 import { WalletAvatar } from "./app/screen";
@@ -37,11 +39,22 @@ export default function ProfileSheet({
   const name = useProfileName();
   const [draft, setDraft] = useState("");
   const [copied, setCopied] = useState(false);
+  const [confirmingSignOut, setConfirmingSignOut] = useState(false);
+  const router = useRouter();
 
-  // Start each opening from the saved name.
+  // Start each opening from the saved name, with sign-out not armed.
   useEffect(() => {
-    if (open) setDraft(name);
+    if (open) {
+      setDraft(name);
+      setConfirmingSignOut(false);
+    }
   }, [open, name]);
+
+  function doSignOut() {
+    signOut();
+    onOpenChange(false);
+    router.replace("/app");
+  }
 
   const changed = draft.trim() !== name;
 
@@ -119,6 +132,28 @@ export default function ProfileSheet({
               <Row icon={<Globe className="size-[18px]" />} label="Network" value="Arbitrum Sepolia" />
             </CardRows>
           </Card>
+
+          {/* Two steps, in place — no browser confirm() popup. */}
+          {confirmingSignOut ? (
+            <div className="flex flex-col gap-3 rounded-2xl bg-destructive/10 p-4 ring-1 ring-destructive/25 duration-200 animate-in fade-in">
+              <p className="text-[13px] leading-relaxed">
+                Your money stays safe in your wallet. To get back in, sign in with the same passkey.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="secondary" onClick={() => setConfirmingSignOut(false)}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={doSignOut}>
+                  Sign out
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button variant="ghost" className="text-destructive" onClick={() => setConfirmingSignOut(true)}>
+              <LogOut />
+              Sign out
+            </Button>
+          )}
         </div>
       </SheetContent>
     </Sheet>
