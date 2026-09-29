@@ -14,7 +14,9 @@ export default function Badge({ preset = "keep", tag, children }) {
   }, [preset]);
 
   return (
-    <span className="inline-flex items-center gap-2.5 rounded-[11px] bg-[#060e0a] p-1 pr-3.5 text-[15px] leading-none text-[#eaf5ef] shadow-[0_10px_24px_-14px_rgba(6,14,10,0.7)]">
+    // Light glass, like the cards below it: a solid black pill shouted over
+    // the white page. The green "Soon" chip stays the one bold thing.
+    <span className="inline-flex items-center gap-2.5 rounded-[12px] border border-white/80 bg-white/65 p-1 pr-3.5 text-[15px] leading-none text-ink shadow-[0_8px_22px_-14px_rgba(8,45,28,0.35)] backdrop-blur-[10px]">
       <span
         className="relative isolate overflow-hidden rounded-[8px] px-2.5 py-[7px] font-semibold"
         style={{ background: FALLBACK[preset] }}
