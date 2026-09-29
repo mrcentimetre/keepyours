@@ -35,6 +35,8 @@ import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 import { Sheet, SheetContent } from "./ui/sheet";
 import GetPaidSheet from "./get-paid-sheet";
+import ProfileSheet from "./profile-sheet";
+import { useProfileName } from "@/hooks/use-profile-name";
 
 function HeroAction({
   href,
@@ -204,6 +206,8 @@ export default function HomeScreen() {
   const [advance, setAdvance] = useState<Advance | null>(null);
   const [now, setNow] = useState(Date.now());
   const [getPaidOpen, setGetPaidOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const name = useProfileName();
   const [alertsOpen, setAlertsOpen] = useState(false);
 
   function refresh() {
@@ -272,15 +276,24 @@ export default function HomeScreen() {
       >
         <Contour position="50% 30%" />
         <div className="relative flex items-center justify-between">
-          <div className="flex min-w-0 items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setProfileOpen(true)}
+            aria-label="Open profile"
+            className="flex min-w-0 items-center gap-3 rounded-full text-left transition-transform active:scale-[0.97]"
+          >
             <WalletAvatar address={address} size={44} />
             <div className="min-w-0">
               <p className="text-[12px] text-white/65">Welcome back</p>
-              <p className="truncate font-mono text-[14px] font-semibold">
-                {address ? shorten(address) : "Keep Yours"}
-              </p>
+              {name ? (
+                <p className="truncate text-[15px] font-semibold">{name}</p>
+              ) : (
+                <p className="truncate font-mono text-[14px] font-semibold">
+                  {address ? shorten(address) : "Keep Yours"}
+                </p>
+              )}
             </div>
-          </div>
+          </button>
           <div className="flex gap-2">
             <Button
               variant="glass"
@@ -399,6 +412,7 @@ export default function HomeScreen() {
       </div>
 
       <GetPaidSheet open={getPaidOpen} onOpenChange={setGetPaidOpen} address={address} />
+      <ProfileSheet open={profileOpen} onOpenChange={setProfileOpen} address={address} />
 
       <Sheet open={alertsOpen} onOpenChange={setAlertsOpen}>
         <SheetContent title="Notifications">
