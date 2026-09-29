@@ -48,7 +48,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${bricolage.variable} ${plex.variable}`}>
+    // suppressHydrationWarning: the app's theme script (lib/theme.ts) sets
+    // data-ky-theme on <html> before React hydrates, on purpose. This only
+    // silences attribute mismatches on <html> itself, not its children.
+    <html lang="en" className={`${bricolage.variable} ${plex.variable}`} suppressHydrationWarning>
       <body className="relative m-0 flex min-h-dvh flex-col bg-transparent font-sans text-ink antialiased">
         {children}
       </body>
