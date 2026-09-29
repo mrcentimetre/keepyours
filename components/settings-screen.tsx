@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronRight, Fingerprint, Globe, Moon, PieChart, ShieldAlert, Smartphone, Sun, Timer, Wallet } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChevronRight, Fingerprint, Globe, Moon, PieChart, PlayCircle, ShieldAlert, Smartphone, Sun, Timer, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from "@/lib/theme";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
@@ -10,6 +11,7 @@ import { getVaultSettings, DEFAULT_SETTINGS, type VaultSettings } from "@/lib/va
 import { formatCooldown, shorten } from "@/lib/format";
 import { Screen, ScreenHeader, SectionLabel, WalletAvatar } from "./app/screen";
 import ProfileSheet from "./profile-sheet";
+import { ONBOARDED_KEY } from "./onboarding-carousel";
 import { Card, CardRows } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Skeleton } from "./ui/skeleton";
@@ -62,6 +64,16 @@ export default function SettingsScreen() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [theme, setTheme] = useState<ThemeChoice>("dark");
   const name = useProfileName();
+  const router = useRouter();
+
+  function replayIntro() {
+    try {
+      localStorage.removeItem(ONBOARDED_KEY);
+    } catch {
+      // storage blocked: the intro already shows every visit
+    }
+    router.push("/app");
+  }
 
   useEffect(() => {
     setMounted(true);
@@ -142,6 +154,13 @@ export default function SettingsScreen() {
           label="Contracts"
           value={<Badge variant="warning">Unaudited</Badge>}
         />
+        <button type="button" onClick={replayIntro} className="w-full text-left active:bg-surface-2">
+          <Row
+            icon={<PlayCircle className="size-[18px]" />}
+            label="Replay intro"
+            value={<ChevronRight className="inline size-4" />}
+          />
+        </button>
       </Group>
 
       <p className="pt-2 text-center text-[12px] text-muted-foreground">Keep Yours · Get paid. Keep yours.</p>
