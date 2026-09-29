@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { LAYERS, STUB_CLIP, TICKET_H, TICKET_W, drawLayer, loadPassAssets, ticketBlob } from "./ticket";
+import { passQuery } from "./pass/pass-params";
 
 const SITE = "https://keepyours.xyz";
 
@@ -64,10 +65,39 @@ export default function WaitlistTicket({ name, handle }) {
     }
   }
 
-  function onShare() {
+  // The pass PNG, made ahead of time: iOS only opens the share sheet if
+  // share() runs straight from the tap, with no slow work in between.
+  const fileRef = useRef(null);
+  useEffect(() => {
+    if (!pass) return;
+    ticketBlob(pass)
+      .then((blob) => {
+        fileRef.current = new File([blob], `keep-yours-pass-${handle.toLowerCase()}.png`, { type: "image/png" });
+      })
+      .catch(() => {});
+  }, [pass, handle]);
+
+  // Their own link: X shows their pass as the card (app/pass/og).
+  const passLink = `${SITE}/pass?${passQuery({ name, handle })}`;
+  const shareText = "I'm on the Keep Yours waitlist. Get paid. Keep yours.";
+
+  async function onShare() {
+    // Phones: hand the image itself to the share sheet, so it's attached
+    // to the post in the X app. Desktop share sheets rarely list X, so
+    // desktop goes straight to X with the link (and its pass card).
+    const file = fileRef.current;
+    const phone = window.matchMedia("(pointer: coarse)").matches;
+    if (phone && file && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], text: `${shareText} @keepyoursxyz ${passLink}` });
+        return;
+      } catch (err) {
+        if (err?.name === "AbortError") return; // they closed the sheet
+      }
+    }
     const url = new URL("https://x.com/intent/post");
-    url.searchParams.set("text", "I'm on the Keep Yours waitlist. Get paid. Keep yours.");
-    url.searchParams.set("url", SITE);
+    url.searchParams.set("text", shareText);
+    url.searchParams.set("url", passLink);
     url.searchParams.set("via", "keepyoursxyz");
     window.open(url.toString(), "_blank", "noopener,noreferrer");
   }

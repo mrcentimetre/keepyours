@@ -39,7 +39,7 @@ function hash(text) {
   return h >>> 0;
 }
 
-function barcode(seed) {
+export function barcode(seed) {
   let s = hash(seed) || 1;
   const next = () => {
     s ^= s << 13;
@@ -68,6 +68,42 @@ function ticketPath(ctx) {
   ctx.arc(0, 0, CORNER, Math.PI / 2, 0, true);
   ctx.closePath();
 }
+
+/**
+ * The ticket's shape, barcode and tear line as an SVG — for the server-drawn
+ * link preview (app/pass/og), which has no canvas. Same geometry as
+ * ticketPath() and paintShape()/paintCode() above; text is laid on top there.
+ */
+export function ticketSvg(handle) {
+  const W = TICKET_W;
+  const H = TICKET_H;
+  const r = CORNER;
+  const n = NOTCH;
+  const path = [
+    `M${r} 0`,
+    `L${SPLIT - n} 0 A${n} ${n} 0 0 0 ${SPLIT + n} 0`,
+    `L${W - r} 0 A${r} ${r} 0 0 0 ${W} ${r}`,
+    `L${W} ${H - r} A${r} ${r} 0 0 0 ${W - r} ${H}`,
+    `L${SPLIT + n} ${H} A${n} ${n} 0 0 0 ${SPLIT - n} ${H}`,
+    `L${r} ${H} A${r} ${r} 0 0 0 0 ${H - r}`,
+    `L0 ${r} A${r} ${r} 0 0 0 ${r} 0 Z`,
+  ].join(" ");
+
+  const widths = barcode(handle.toLowerCase());
+  const unit = CODE_W / widths.reduce((a, b) => a + b, 0);
+  let x = CODE_X;
+  const bars = widths
+    .map((w, i) => {
+      const bar = i % 2 === 0 ? `<rect x="${x}" y="${CODE_Y}" width="${w * unit}" height="${CODE_H}"/>` : "";
+      x += w * unit;
+      return bar;
+    })
+    .join("");
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><defs><linearGradient id="g" gradientUnits="userSpaceOnUse" x1="0" y1="${H}" x2="${W}" y2="0"><stop offset="0" stop-color="${C.mint}"/><stop offset="1" stop-color="${C.green}"/></linearGradient></defs><path d="${path}" fill="url(#g)"/><line x1="${SPLIT}" y1="${NOTCH + 10}" x2="${SPLIT}" y2="${H - NOTCH - 10}" stroke="rgba(6,14,10,0.32)" stroke-width="2.5" stroke-dasharray="9 7" stroke-linecap="round"/><g fill="${C.night}">${bars}</g></svg>`;
+}
+
+export const TICKET_BODY = { x: BODY_X, max: BODY_MAX };
 
 function tracked(ctx, text, x, y, em) {
   if ("letterSpacing" in ctx) {
