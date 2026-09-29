@@ -11,7 +11,7 @@ function Glow({ tone = "brand" }: { tone?: "brand" | "warning" }) {
     return (
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 top-0 mx-auto h-[62dvh] max-w-[640px] bg-cover bg-[position:50%_30%] opacity-80"
+        className="ky-glow pointer-events-none fixed inset-x-0 top-0 mx-auto h-[62dvh] max-w-[640px] bg-cover bg-[position:50%_30%] opacity-80"
         style={{
           backgroundImage: "url(/brand/contour-square.jpg)",
           maskImage: "linear-gradient(180deg, #000 0%, rgba(0,0,0,0.6) 45%, transparent 100%)",
@@ -74,10 +74,8 @@ function IconOrb({
       />
       <span
         className={cn(
-          "relative flex size-24 items-center justify-center rounded-[30px] ring-1 ring-white/10 shadow-float",
-          tone === "warning"
-            ? "bg-gradient-to-br from-[#3a2c0f] to-[#1d1608] text-warning"
-            : "bg-gradient-to-br from-[#16432b] to-[#0c2418] text-accent"
+          "relative flex size-24 items-center justify-center rounded-[30px] ring-1 ring-hairline shadow-float",
+          tone === "warning" ? "bg-[image:var(--orb-warning)] text-warning" : "bg-[image:var(--orb-brand)] text-accent"
         )}
       >
         {children}

@@ -3,12 +3,13 @@ import { Toaster } from "sonner";
 import RegisterSW from "@/components/register-sw";
 import AppShell from "@/components/app-shell";
 import NoZoom from "@/components/no-zoom";
+import ThemeSync from "@/components/theme-sync";
+import { THEME_SCRIPT } from "@/lib/theme";
 
-// The product app is a dark, "Night" theme — different from the waitlist's
-// light theme at /. The .ky-app class (app/globals.css) carries its own
-// --background/--card/--primary/... tokens, separate from the waitlist's
-// @theme block, so bg-background/text-foreground/etc. below always resolve
-// to the dark palette here regardless of what the waitlist page is doing.
+// The product app defaults to the dark "Night" theme, with Light as a
+// choice in Settings (lib/theme.ts). The .ky-app class (app/globals.css)
+// carries its own --background/--card/--primary/... tokens, separate from
+// the waitlist's @theme block at /.
 export const viewport: Viewport = {
   themeColor: "#060E0A",
   viewportFit: "cover",
@@ -37,8 +38,11 @@ export const metadata: Metadata = {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="ky-app min-h-dvh bg-background font-sans text-foreground antialiased">
+      {/* Before anything paints: apply the saved Light/Dark choice. */}
+      <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       <RegisterSW />
       <NoZoom />
+      <ThemeSync />
       <AppShell>{children}</AppShell>
       <Toaster
         theme="dark"

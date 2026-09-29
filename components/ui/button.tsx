@@ -12,7 +12,7 @@ const buttonVariants = cva(
         // The brand gradient — each screen's one main call-to-action.
         brand: "bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-brand hover:brightness-105",
         // White pill, for the primary action sitting on the green hero.
-        white: "bg-foreground text-background hover:bg-white",
+        white: "bg-foreground text-background hover:bg-foreground/90",
         // Frosted, for secondary actions on the hero.
         glass: "bg-white/12 text-white ring-1 ring-white/20 backdrop-blur-md hover:bg-white/18",
         secondary: "bg-surface-2 text-foreground hover:bg-secondary",

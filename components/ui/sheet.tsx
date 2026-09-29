@@ -36,7 +36,7 @@ function SheetContent({
           className
         )}
       >
-        <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-white/15" aria-hidden="true" />
+        <div className="mx-auto mt-3 h-1.5 w-10 shrink-0 rounded-full bg-foreground/15" aria-hidden="true" />
         <div className="overflow-y-auto overscroll-contain px-5 pt-4 pb-[calc(env(safe-area-inset-bottom)+20px)]">
           <Drawer.Title className="font-display text-[20px] font-extrabold tracking-[-0.02em]">
             {title}

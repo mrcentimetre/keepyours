@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Copy, Fingerprint, Globe, PieChart, ShieldAlert, Timer, Wallet } from "lucide-react";
+import { Check, Copy, Fingerprint, Globe, Moon, PieChart, ShieldAlert, Smartphone, Sun, Timer, Wallet } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { getThemeChoice, setThemeChoice, type ThemeChoice } from "@/lib/theme";
+
+const THEMES = [
+  { value: "dark", label: "Dark", Icon: Moon },
+  { value: "light", label: "Light", Icon: Sun },
+  { value: "system", label: "Auto", Icon: Smartphone },
+] as const satisfies readonly { value: ThemeChoice; label: string; Icon: unknown }[];
 import { toast } from "sonner";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import { getVaultSettings, DEFAULT_SETTINGS, type VaultSettings } from "@/lib/vault-settings";
@@ -52,9 +60,11 @@ export default function SettingsScreen() {
   const [address, setAddress] = useState<string | null>(null);
   const [settings, setSettings] = useState<VaultSettings>(DEFAULT_SETTINGS);
   const [copied, setCopied] = useState(false);
+  const [theme, setTheme] = useState<ThemeChoice>("dark");
 
   useEffect(() => {
     setMounted(true);
+    setTheme(getThemeChoice());
     setAddress(getCachedAddress());
     setSettings(getVaultSettings() ?? DEFAULT_SETTINGS);
   }, []);
@@ -98,6 +108,34 @@ export default function SettingsScreen() {
         <Row icon={<PieChart className="size-[18px]" />} label="Split" value={`Spend ${100 - keepPct}% · Keep ${keepPct}%`} />
         <Row icon={<Timer className="size-[18px]" />} label="Waiting period" value={formatCooldown(settings.cooldownSeconds)} />
       </Group>
+
+      <section className="flex flex-col gap-2">
+        <SectionLabel className="px-1">Appearance</SectionLabel>
+        <Card className="grid grid-cols-3 gap-1.5 p-1.5" role="radiogroup" aria-label="Appearance">
+          {THEMES.map(({ value, label, Icon }) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={theme === value}
+              onClick={() => {
+                setTheme(value);
+                setThemeChoice(value);
+              }}
+              className={cn(
+                "flex h-12 items-center justify-center gap-2 rounded-[16px] text-[14px] font-semibold transition-colors",
+                theme === value ? "bg-primary text-primary-foreground shadow-brand" : "text-muted-foreground"
+              )}
+            >
+              <Icon className="size-[18px]" aria-hidden="true" />
+              {label}
+            </button>
+          ))}
+        </Card>
+        <p className="px-1 text-[12px] leading-relaxed text-muted-foreground">
+          On iPhone, the clock bar matches after you reopen the app.
+        </p>
+      </section>
 
       <Group label="Security">
         <Row icon={<Fingerprint className="size-[18px]" />} label="Sign-in" value="Passkey on this device" />

@@ -18,7 +18,7 @@ function Float({ className, children }: { className?: string; children: React.Re
   return (
     <div
       className={cn(
-        "rounded-[20px] bg-card/90 ring-1 ring-white/[0.08] shadow-float backdrop-blur-md",
+        "rounded-[20px] bg-card/90 ring-1 ring-hairline shadow-float backdrop-blur-md",
         className
       )}
     >

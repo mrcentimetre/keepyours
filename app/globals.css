@@ -9,8 +9,8 @@
  * Ink), just given shadcn's standard variable names so cva-based ui/
  * components (Button, Card, ...) work without redefining color per-component.
  * Scoped to .ky-app (set on app/app/layout's root div) rather than :root,
- * since the app is always dark and the waitlist is always light — there's
- * no mode to switch, so no .dark class/toggle machinery is needed here. */
+ * so the waitlist's own light palette is untouched. Dark is the default;
+ * the light overrides are the html[data-ky-theme="light"] block below. */
 .ky-app {
   color-scheme: dark;
 
@@ -55,7 +55,57 @@
   --elev-float: 0 22px 44px -16px rgba(0, 0, 0, 0.9);
   --elev-brand: 0 12px 28px -12px rgba(22, 184, 98, 0.6);
 
+  --dock: rgba(13, 26, 19, 0.9);
+  --orb-brand: linear-gradient(135deg, #16432b, #0c2418);
+  --orb-warning: linear-gradient(135deg, #3a2c0f, #1d1608);
+
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Light theme (Settings → Appearance; lib/theme.ts sets data-ky-theme).
+   The hero and the advance credit-line card keep the dark contour art in
+   both themes — they're brand surfaces, like a bank card. Greens, amber and
+   red are darkened so they stay readable as text on white. */
+html[data-ky-theme="light"] .ky-app {
+  color-scheme: light;
+
+  --background: #eef5f1;
+  --foreground: #0b1f15;
+  --card: #ffffff;
+  --card-foreground: #0b1f15;
+  --popover: #ffffff;
+  --popover-foreground: #0b1f15;
+  --primary: #16b862;
+  --primary-foreground: #03170c;
+  --secondary: #dde9e2;
+  --secondary-foreground: #0b1f15;
+  --muted: #e6efea;
+  --muted-foreground: #5a7064;
+  --accent: #0f8f4c;
+  --accent-foreground: #ffffff;
+  --destructive: #d93f3f;
+  --destructive-foreground: #ffffff;
+  --warning: #b87a12;
+  --warning-foreground: #ffffff;
+  --border: #d5e2da;
+  --input: #d5e2da;
+  --ring: #16b862;
+
+  --surface-2: #e9f1ec;
+  --hairline: rgba(11, 31, 21, 0.08);
+
+  --elev-card: 0 1px 2px rgba(8, 45, 28, 0.05), 0 14px 32px -20px rgba(8, 45, 28, 0.28);
+  --elev-float: 0 22px 44px -18px rgba(8, 45, 28, 0.35);
+  --elev-brand: 0 12px 28px -12px rgba(22, 184, 98, 0.45);
+
+  --dock: rgba(255, 255, 255, 0.9);
+  --orb-brand: linear-gradient(135deg, #e3f7ec, #c6ecd6);
+  --orb-warning: linear-gradient(135deg, #fbf0d9, #f3dfb4);
+}
+html[data-ky-theme="light"] .ky-app .ky-glow {
+  /* The contour art is dark green; inverted it becomes pale mint lines. */
+  filter: invert(1) hue-rotate(180deg);
+  opacity: 0.55;
 }
 
 /* Everything BEHIND the app is Night too, whenever the app is on screen.
@@ -73,6 +123,10 @@ html:has(.ky-app) {
 }
 html:has(.ky-app) body {
   background-color: #060e0a;
+}
+html[data-ky-theme="light"]:has(.ky-app),
+html[data-ky-theme="light"]:has(.ky-app) body {
+  background-color: #eef5f1;
 }
 html:has(.ky-app)::before,
 html:has(.ky-app) body::before {
@@ -173,6 +227,7 @@ html:has(.ky-app) body::before {
   --shadow-card: var(--elev-card);
   --shadow-float: var(--elev-float);
   --shadow-brand: var(--elev-brand);
+  --color-dock: var(--dock);
   --radius-sm: calc(var(--radius) - 8px);
   --radius-md: calc(var(--radius) - 4px);
   --radius-lg: var(--radius);
