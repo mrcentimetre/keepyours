@@ -88,3 +88,13 @@ Amber always means waiting. Red always means blocked. Details: `docs/BRAND.md`.
 Freelancers and web3 contributors paid in USDT/USDC, starting with the SL Web3 Builders Club in Sri Lanka. They already spend through crypto cards and cash out via one trusted P2P seller. What they lack is a way to keep part of it.
 
 Research, competitor analysis and the full proposal live in a separate private repo (`onchain-problem-discovery`) and at https://claude.ai/artifact/9HeCdWLtQBJFMuN1TMJGUt
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
