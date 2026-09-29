@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, IBM_Plex_Sans } from "next/font/google";
+import { Bricolage_Grotesque, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import "./globals.css";
 
 const bricolage = Bricolage_Grotesque({
@@ -13,6 +13,14 @@ const plex = IBM_Plex_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600"],
   variable: "--font-plex",
+  display: "swap",
+});
+
+// numbers on the waitlist pass
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["500"],
+  variable: "--font-plex-mono",
   display: "swap",
 });
 
@@ -51,7 +59,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     // suppressHydrationWarning: the app's theme script (lib/theme.ts) sets
     // data-ky-theme on <html> before React hydrates, on purpose. This only
     // silences attribute mismatches on <html> itself, not its children.
-    <html lang="en" className={`${bricolage.variable} ${plex.variable}`} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${bricolage.variable} ${plex.variable} ${plexMono.variable}`}
+      suppressHydrationWarning
+    >
       <body className="relative m-0 flex min-h-dvh flex-col bg-transparent font-sans text-ink antialiased">
         {children}
       </body>
