@@ -54,7 +54,7 @@ function HeroAction({
         className={cn(
           "flex size-14 items-center justify-center rounded-full transition-transform duration-150 group-active:scale-90",
           primary
-            ? "bg-foreground text-background shadow-[0_10px_24px_-10px_rgba(0,0,0,0.6)]"
+            ? "bg-[#eaf5ef] text-[#060e0a] shadow-[0_10px_24px_-10px_rgba(0,0,0,0.6)]"
             : "bg-white/12 text-white ring-1 ring-white/20 backdrop-blur-md"
         )}
       >
@@ -129,11 +129,16 @@ function SplitTile({
 }) {
   return (
     <Card className="relative overflow-hidden p-4">
+      {/* A radial gradient, not a blurred circle: iOS Safari doesn't clip a
+          blur() child to its parent's rounded corner, which squared off the
+          tile's top-right corner. */}
       <span
         aria-hidden="true"
         className={cn(
-          "absolute -top-8 -right-8 size-24 rounded-full blur-2xl",
-          tone === "keep" ? "bg-primary/25" : "bg-accent/15"
+          "absolute -top-10 -right-10 size-32",
+          tone === "keep"
+            ? "bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--primary)_25%,transparent),transparent)]"
+            : "bg-[radial-gradient(closest-side,color-mix(in_srgb,var(--accent)_15%,transparent),transparent)]"
         )}
       />
       <SectionLabel>{label}</SectionLabel>
