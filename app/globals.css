@@ -43,13 +43,15 @@
   --surface-2: #182b21;
   --hairline: rgba(234, 245, 239, 0.06);
 
-  /* The brand's contour-line texture (brand/bg-square-1254.png, compressed
-     to public/brand/), with a light wash so white text on the brightest
-     part of the glow stays readable. */
-  --hero:
-    linear-gradient(180deg, rgba(6, 14, 10, 0.05) 0%, rgba(6, 14, 10, 0.35) 100%),
-    url("/brand/contour-square.jpg") 50% 35% / cover no-repeat,
-    #0a2e1e;
+  /* Brand surfaces (home hero, advance card): a green glow, with the
+     contour lines (components/app/contour.tsx) drawn over it in --contour.
+     White text sits on these in both themes. */
+  --hero: radial-gradient(95% 85% at 50% 8%, #14864d 0%, #0b4a2c 48%, #071a11 100%);
+  --hero-card: radial-gradient(120% 120% at 85% 0%, #14864d 0%, #0b4a2c 50%, #071a11 100%);
+  --contour: rgba(98, 230, 160, 0.16);
+  /* Flow screens: a green light from the top, and the lines in it. */
+  --glow-tint: rgba(22, 184, 98, 0.32);
+  --glow-contour: rgba(98, 230, 160, 0.2);
 
   --elev-card: 0 1px 0 0 rgba(255, 255, 255, 0.03) inset, 0 18px 40px -26px rgba(0, 0, 0, 0.85);
   --elev-float: 0 22px 44px -16px rgba(0, 0, 0, 0.9);
@@ -63,9 +65,9 @@
 }
 
 /* Light theme (Settings → Appearance; lib/theme.ts sets data-ky-theme).
-   The hero and the advance credit-line card keep the dark contour art in
-   both themes — they're brand surfaces, like a bank card. Greens, amber and
-   red are darkened so they stay readable as text on white. */
+   The hero and the advance credit-line card stay solid green with white
+   text in both themes — brand surfaces, like a bank card. Greens, amber
+   and red are darkened so they stay readable as text on white. */
 html[data-ky-theme="light"] .ky-app {
   color-scheme: light;
 
@@ -101,11 +103,12 @@ html[data-ky-theme="light"] .ky-app {
   --dock: rgba(255, 255, 255, 0.9);
   --orb-brand: linear-gradient(135deg, #e3f7ec, #c6ecd6);
   --orb-warning: linear-gradient(135deg, #fbf0d9, #f3dfb4);
-}
-html[data-ky-theme="light"] .ky-app .ky-glow {
-  /* The contour art is dark green; inverted it becomes pale mint lines. */
-  filter: invert(1) hue-rotate(180deg);
-  opacity: 0.55;
+
+  --hero: radial-gradient(95% 85% at 50% 8%, #1bb063 0%, #0f8a4a 50%, #0b6a39 100%);
+  --hero-card: radial-gradient(120% 120% at 85% 0%, #1bb063 0%, #0f8a4a 50%, #0b6a39 100%);
+  --contour: rgba(255, 255, 255, 0.16);
+  --glow-tint: rgba(22, 184, 98, 0.16);
+  --glow-contour: rgba(15, 143, 76, 0.2);
 }
 
 /* Everything BEHIND the app is Night too, whenever the app is on screen.

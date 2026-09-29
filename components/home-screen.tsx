@@ -27,6 +27,7 @@ import {
 import { getPendingWithdrawal, type PendingWithdrawal } from "@/lib/mock-withdrawal";
 import { getOpenAdvance, type Advance } from "@/lib/mock-advance";
 import { formatUsdc, formatCooldownAdj, formatCountdown, shorten, timeAgo } from "@/lib/format";
+import { Contour } from "./app/contour";
 import { cn } from "@/lib/utils";
 import { Money, SectionLabel, WalletAvatar } from "./app/screen";
 import { Card, CardRows } from "./ui/card";
@@ -269,6 +270,7 @@ export default function HomeScreen() {
         className="relative overflow-hidden rounded-b-[32px] px-5 pt-[calc(env(safe-area-inset-top)+18px)] pb-7 text-white shadow-float ring-1 ring-white/[0.07]"
         style={{ background: "var(--hero)" }}
       >
+        <Contour position="50% 30%" />
         <div className="relative flex items-center justify-between">
           <div className="flex min-w-0 items-center gap-3">
             <WalletAvatar address={address} size={44} />

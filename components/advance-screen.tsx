@@ -18,6 +18,7 @@ import {
 import { formatShortDate, formatUsdc } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { Screen, ScreenHeader, Money, SectionLabel } from "./app/screen";
+import { Contour } from "./app/contour";
 import SlideToConfirm from "./slide-to-confirm";
 import { Card, CardRows } from "./ui/card";
 import { Button } from "./ui/button";
@@ -198,15 +199,15 @@ export default function AdvanceScreen() {
     <Screen className="gap-5">
       <ScreenHeader title="Advance" subtitle="Borrow against your own savings" />
 
-      {/* The limit as a card you hold — a credit line, not a form field. */}
+      {/* The limit as a card you hold — a credit line, not a form field.
+          min-h, not a fixed aspect ratio: the fixed height clipped the last
+          line of text off the bottom on a phone. */}
       <div
-        className="relative aspect-[1.7] overflow-hidden rounded-[26px] p-5 text-white shadow-float ring-1 ring-white/10"
-        style={{
-          background:
-            "linear-gradient(135deg, rgba(6,14,10,0.2) 0%, rgba(6,14,10,0.55) 100%), url(/brand/contour-banner.jpg) 75% 50% / cover no-repeat, #0a2e1e",
-        }}
+        className="relative min-h-[200px] overflow-hidden rounded-[26px] p-5 text-white shadow-float ring-1 ring-white/10"
+        style={{ background: "var(--hero-card)" }}
       >
-        <div className="flex h-full flex-col justify-between">
+        <Contour variant="banner" position="75% 50%" />
+        <div className="relative flex min-h-[160px] flex-col justify-between gap-6">
           <div className="flex items-start justify-between">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/12 px-2.5 py-1 text-[11px] font-bold tracking-[0.08em] uppercase ring-1 ring-white/20 backdrop-blur-md">
               <Zap className="size-3.5" /> Advance line
