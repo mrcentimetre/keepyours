@@ -1,11 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ArrowDownLeft, ArrowRight, Lock, Wallet, Zap } from "lucide-react";
+import { ArrowRight, Lock, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import SlideToConfirm from "./slide-to-confirm";
 import CountdownRing from "./countdown-ring";
 import { FlowScreen, FlowTitle, FlowBody, BrandMark } from "./app/flow";
+import { AdvanceIcon, CooldownIcon, SplitIcon } from "./waitlist/feature-icons";
 
 export const ONBOARDED_KEY = "ky_onboarded";
 
@@ -31,9 +32,7 @@ function SplitArt() {
   return (
     <div className="relative mx-auto flex h-[300px] w-full max-w-[320px] flex-col items-center justify-center">
       <Float className="flex w-[230px] items-center gap-3 px-4 py-3.5">
-        <span className="flex size-10 items-center justify-center rounded-full bg-primary/15 text-primary">
-          <ArrowDownLeft className="size-5" />
-        </span>
+        <SplitIcon className="size-11 shrink-0" />
         <div>
           <p className="text-[12px] text-muted-foreground">Client payment</p>
           <p className="font-mono text-[18px] font-semibold tabular-nums">$100.00</p>
@@ -67,7 +66,7 @@ function CooldownArt() {
         <p className="text-[12px] text-muted-foreground">waiting period</p>
       </CountdownRing>
       <Float className="absolute -right-12 bottom-0 flex items-center gap-2 px-3 py-2">
-        <span className="size-2 rounded-full bg-warning" />
+        <CooldownIcon className="size-7" />
         <span className="text-[12px] font-semibold">Cancel any time</span>
       </Float>
     </div>
@@ -83,9 +82,7 @@ function AdvanceArt() {
             <p className="text-[10.5px] font-bold tracking-[0.12em] text-muted-foreground uppercase">Available now</p>
             <p className="mt-1 font-mono text-[28px] font-semibold tabular-nums">$70.00</p>
           </div>
-          <span className="flex size-10 items-center justify-center rounded-full bg-primary/15 text-primary">
-            <Zap className="size-5" />
-          </span>
+          <AdvanceIcon className="size-12 shrink-0" />
         </div>
         <div className="mt-4 flex h-2 gap-1 overflow-hidden rounded-full">
           <div className="flex-1 bg-primary" />
