@@ -2,6 +2,7 @@
 
 import { Check, Delete } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { haptic } from "@/lib/haptics";
 
 export type AmountPreset = { label: string; value: number };
 
@@ -118,7 +119,9 @@ export default function AmountKeypad({
   );
 
   return (
-    <div className="grid grid-cols-4 gap-2.5">
+    // Every key press taps the hand (lib/haptics.ts) — one capture handler
+    // instead of one per key.
+    <div className="grid grid-cols-4 gap-2.5" onClickCapture={haptic}>
       {digit("1")}
       {digit("2")}
       {digit("3")}
@@ -126,7 +129,7 @@ export default function AmountKeypad({
         type="button"
         onClick={() => onChange(value.slice(0, -1))}
         aria-label="Backspace"
-        className={cn(KEY, "bg-destructive/85 text-[#2a0b0b] active:bg-destructive")}
+        className={cn(KEY, "bg-destructive/85 text-destructive-foreground active:bg-destructive")}
       >
         <Delete className="size-6" />
       </button>
