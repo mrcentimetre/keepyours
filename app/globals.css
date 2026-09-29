@@ -15,6 +15,70 @@
 
   --shadow-glass:
     0 1px 2px rgba(8, 45, 28, 0.05), 0 24px 60px -24px rgba(8, 45, 28, 0.28);
+
+  /* Springs sampled into linear(): stiffness/damping/mass 240/22/1.1 and 420/34/0.9. */
+  --ease-issue: linear(0, 0.0297, 0.1052, 0.2087, 0.3261, 0.4466, 0.5626, 0.6689, 0.7624, 0.8416, 0.9063, 0.9571, 0.9953, 1.0225, 1.0404, 1.0507, 1.0551, 1.0551, 1.052, 1.0469, 1.0407, 1.034, 1.0274, 1.0212, 1.0157, 1.0109, 1.0069, 1.0037, 1.0012, 0.9994, 0.9982, 0.9974, 0.997, 0.9969, 0.997, 0.9972, 0.9976, 0.9979, 0.9983, 0.9987, 1);
+  --ease-quick: linear(0, 0.0209, 0.0735, 0.1459, 0.2289, 0.3159, 0.4021, 0.4846, 0.5611, 0.6307, 0.6927, 0.7472, 0.7943, 0.8346, 0.8686, 0.897, 0.9205, 0.9396, 0.9551, 0.9674, 0.9771, 0.9847, 0.9904, 0.9947, 0.9979, 1.0001, 1.0016, 1.0026, 1.0032, 1.0034, 1.0035, 1.0034, 1.0032, 1.0029, 1.0026, 1.0023, 1.002, 1.0017, 1.0015, 1.0012, 1);
+  --ease-out-soft: cubic-bezier(0.16, 1, 0.3, 1);
+
+  @keyframes issue {
+    from {
+      transform: translateY(56px) rotate(9deg) scale(0.9);
+    }
+    to {
+      transform: rotate(-2.5deg);
+    }
+  }
+
+  @keyframes unblur {
+    from {
+      opacity: 0;
+      filter: blur(12px);
+    }
+  }
+
+  @keyframes unblur-sm {
+    from {
+      opacity: 0;
+      filter: blur(6px);
+    }
+  }
+
+  @keyframes print {
+    from {
+      clip-path: inset(0 var(--clip-from, 100%) 0 0);
+    }
+    to {
+      clip-path: inset(0 var(--clip-to, 0%) 0 0);
+    }
+  }
+
+  @keyframes rise {
+    from {
+      transform: translateY(12px);
+    }
+  }
+
+  @keyframes leave {
+    to {
+      opacity: 0;
+      transform: translateY(-10px) scale(0.98);
+      filter: blur(4px);
+    }
+  }
+}
+
+/* Pass handover. Inline so --d (the stagger delay) is read from each element,
+   not resolved once on :root. */
+@theme inline {
+  --animate-issue:
+    issue 0.7s var(--ease-issue) var(--d, 0s) both,
+    unblur 0.45s var(--ease-out-soft) var(--d, 0s) both;
+  --animate-print: print 0.55s var(--ease-out-soft) var(--d, 0s) both;
+  --animate-rise:
+    rise 0.4s var(--ease-quick) var(--d, 0s) both,
+    unblur-sm 0.35s var(--ease-out-soft) var(--d, 0s) both;
+  --animate-leave: leave 0.22s ease-in both;
 }
 
 /* The gradient is fixed to the viewport so it can never run out before the
@@ -40,6 +104,57 @@ html::before {
     radial-gradient(70% 55% at 88% 12%, #d8f3e6 0%, rgba(216, 243, 230, 0) 62%),
     radial-gradient(85% 70% at 50% 112%, #9fe9c4 0%, rgba(159, 233, 196, 0) 58%),
     linear-gradient(180deg, #f7fbf9 0%, #eff8f3 55%, #e3f5ec 100%);
+}
+
+/* feature card icons */
+@media (prefers-reduced-motion: no-preference) {
+  .ic-split-l {
+    animation: ic-split-l 3.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  }
+  .ic-split-r {
+    animation: ic-split-r 3.2s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  }
+  .ic-cool-fill {
+    animation: ic-cool-fill 6s linear infinite;
+  }
+  .ic-cool-hand {
+    transform-origin: 24px 27px;
+    animation: ic-cool-hand 6s steps(12) infinite;
+  }
+  .ic-adv-lift {
+    animation: ic-adv-lift 2.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  }
+  .ic-adv-arrow {
+    animation: ic-adv-arrow 2.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+  }
+}
+
+/* one coin, then it parts into spend and keep */
+@keyframes ic-split-l {
+  0%, 12%, 100% { transform: translateX(9px); }
+  40%, 78% { transform: translateX(0); }
+}
+@keyframes ic-split-r {
+  0%, 12%, 100% { transform: translateX(-9px); }
+  40%, 78% { transform: translateX(0); }
+}
+
+@keyframes ic-cool-fill {
+  from { stroke-dashoffset: 62.83; }
+  to { stroke-dashoffset: 0; }
+}
+@keyframes ic-cool-hand {
+  to { transform: rotate(360deg); }
+}
+
+/* the top coin lifts off the stack and settles back */
+@keyframes ic-adv-lift {
+  0%, 18%, 100% { transform: translateY(0); }
+  45%, 70% { transform: translateY(-6px); }
+}
+@keyframes ic-adv-arrow {
+  0%, 22%, 100% { opacity: 0; transform: translateY(3px); }
+  48%, 70% { opacity: 1; transform: translateY(0); }
 }
 
 /* film grain */
