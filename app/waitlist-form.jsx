@@ -4,6 +4,7 @@ import { useState } from "react";
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const HANDLE = /^[A-Za-z0-9_]{1,15}$/;
+const NAME_MAX = 40;
 
 const cleanHandle = (value) => value.trim().replace(/^@+/, "");
 
@@ -24,11 +25,12 @@ function Reveal({ open, children }) {
 
 export default function WaitlistForm({ onJoined }) {
   const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
   const [handle, setHandle] = useState("");
   const [consent, setConsent] = useState(false);
   // 0: email only, 1: + handle, 2: + consent. Only ever grows.
   const [step, setStep] = useState(0);
-  const [invalid, setInvalid] = useState(null); // "email" | "handle" | "consent"
+  const [invalid, setInvalid] = useState(null); // "email" | "name" | "handle" | "consent"
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
 
@@ -43,9 +45,11 @@ export default function WaitlistForm({ onJoined }) {
   async function onSubmit(e) {
     e.preventDefault();
     const value = email.trim();
+    const who = name.trim();
     const x = cleanHandle(handle);
 
     if (!EMAIL.test(value)) return fail("email", "That email looks off. Check it and try again.");
+    if (!who) return fail("name", "Add your name. It goes on your pass instead of your email.");
     if (!HANDLE.test(x)) return fail("handle", "Add your X handle, like @keepyoursxyz.");
     if (!consent) return fail("consent", "Tick the box so I can tag you at launch.");
 
@@ -58,10 +62,11 @@ export default function WaitlistForm({ onJoined }) {
       const res = await fetch("/api/waitlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: value, handle: x, consent: true, source: "keepyours.xyz" }),
+        body: JSON.stringify({ email: value, name: who, handle: x, consent: true, source: "keepyours.xyz" }),
       });
       if (!res.ok) throw new Error("bad response");
-      onJoined({ email: value, handle: x });
+      // The pass gets the name, not the email — it's meant to be shared.
+      onJoined({ name: who, handle: x });
     } catch {
       setMsg("That didn't save. Try again, or DM @keepyoursxyz on X.");
       setBusy(false);
@@ -118,6 +123,23 @@ export default function WaitlistForm({ onJoined }) {
         </div>
 
         <Reveal open={step >= 1}>
+          <div className="pt-2.5">
+            <input
+              type="text"
+              name="name"
+              placeholder="your name"
+              autoComplete="name"
+              maxLength={NAME_MAX}
+              aria-label="Your name"
+              aria-invalid={invalid === "name"}
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (invalid === "name") setInvalid(null);
+              }}
+              className={field("name")}
+            />
+          </div>
           <div className="relative pt-2.5">
             <span className="pointer-events-none absolute top-[calc(50%+5px)] left-5 -translate-y-1/2 text-base text-muted">
               @

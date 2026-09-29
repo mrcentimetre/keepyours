@@ -86,38 +86,34 @@ function ellipsize(ctx, text, max) {
   return `${cut}…`;
 }
 
-// Shrink first, then split at the @, and only truncate as a last resort.
-function fitEmail(ctx, email, font) {
-  for (let size = 26; size >= 15; size--) {
-    ctx.font = `500 ${size}px ${font}`;
-    if (ctx.measureText(email).width <= BODY_MAX) return { size, lines: [email] };
+// The pass shows the person's name, never their email: it's made to be
+// posted publicly. Shrink to fit first, truncate only as a last resort.
+const NAME_WEIGHT = 600;
+
+function fitName(ctx, name, font) {
+  for (let size = 30; size >= 16; size--) {
+    ctx.font = `${NAME_WEIGHT} ${size}px ${font}`;
+    if (ctx.measureText(name).width <= BODY_MAX) return { size, text: name };
   }
-  const at = email.lastIndexOf("@");
-  const lines = at > 0 ? [email.slice(0, at), email.slice(at)] : [email];
-  for (let size = 22; size >= 15; size--) {
-    ctx.font = `500 ${size}px ${font}`;
-    if (lines.every((l) => ctx.measureText(l).width <= BODY_MAX)) return { size, lines };
-  }
-  ctx.font = `500 15px ${font}`;
-  return { size: 15, lines: lines.map((l) => ellipsize(ctx, l, BODY_MAX)) };
+  return { size: 16, text: ellipsize(ctx, name, BODY_MAX) };
 }
 
 // Where each row of the body column sits, centred as one block.
 function column(ctx, pass) {
-  const fit = fitEmail(ctx, pass.email, pass.fonts.sans);
-  const handleSize = Math.max(13, Math.round(fit.size * 0.72));
+  const fit = fitName(ctx, pass.name, pass.fonts.display);
+  const handleSize = Math.max(14, Math.round(fit.size * 0.62));
   const lockup = 28;
   const caption = 11;
-  const email = fit.lines.length * fit.size * 1.2;
-  const block = lockup + 18 + caption + 10 + email + 8 + handleSize * 1.3;
+  const name = fit.size * 1.2;
+  const block = lockup + 18 + caption + 10 + name + 8 + handleSize * 1.3;
   const top = (TICKET_H - block) / 2;
   return {
     fit,
     handleSize,
     lockupTop: top,
     captionTop: top + lockup + 18,
-    emailTop: top + lockup + 18 + caption + 10,
-    handleTop: top + lockup + 18 + caption + 10 + email + 8,
+    nameTop: top + lockup + 18 + caption + 10,
+    handleTop: top + lockup + 18 + caption + 10 + name + 8,
   };
 }
 
@@ -168,12 +164,12 @@ function paintBrand(ctx, pass) {
   tracked(ctx, "WAITLIST PASS", BODY_X, captionTop, 2.2);
 }
 
-function paintEmail(ctx, pass) {
-  const { fit, emailTop } = column(ctx, pass);
+function paintName(ctx, pass) {
+  const { fit, nameTop } = column(ctx, pass);
   ctx.fillStyle = C.night;
   ctx.textBaseline = "top";
-  ctx.font = `500 ${fit.size}px ${pass.fonts.sans}`;
-  fit.lines.forEach((line, i) => ctx.fillText(line, BODY_X, emailTop + i * fit.size * 1.2));
+  ctx.font = `${NAME_WEIGHT} ${fit.size}px ${pass.fonts.display}`;
+  ctx.fillText(fit.text, BODY_X, nameTop);
 }
 
 function paintHandle(ctx, pass) {
@@ -190,7 +186,7 @@ export const LAYERS = [
   ["shape", paintShape],
   ["code", paintCode],
   ["brand", paintBrand],
-  ["email", paintEmail],
+  ["name", paintName],
   ["handle", paintHandle],
 ];
 

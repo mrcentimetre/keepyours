@@ -13,7 +13,7 @@ const POINTS = [
 ];
 
 export default function Hero() {
-  const [joined, setJoined] = useState(null); // { email, handle }
+  const [joined, setJoined] = useState(null); // { name, handle }
   const [leaving, setLeaving] = useState(null);
 
   // On phones the form is below the fold; bring the pass into view.
@@ -30,7 +30,7 @@ export default function Hero() {
   if (joined) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center pt-10 pb-7">
-        <WaitlistTicket email={joined.email} handle={joined.handle} />
+        <WaitlistTicket name={joined.name} handle={joined.handle} />
       </main>
     );
   }

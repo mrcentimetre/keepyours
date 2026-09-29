@@ -9,11 +9,11 @@ const SITE = "https://keepyours.xyz";
 const STEP = {
   code: { anim: "motion-safe:animate-print", d: "0.3s" },
   brand: { anim: "motion-safe:animate-rise", d: "0.42s" },
-  email: { anim: "motion-safe:animate-rise", d: "0.5s" },
+  name: { anim: "motion-safe:animate-rise", d: "0.5s" },
   handle: { anim: "motion-safe:animate-rise", d: "0.58s" },
 };
 
-export default function WaitlistTicket({ email, handle }) {
+export default function WaitlistTicket({ name, handle }) {
   const wrapRef = useRef(null);
   const layerRefs = useRef({});
   const [pass, setPass] = useState(null);
@@ -21,11 +21,11 @@ export default function WaitlistTicket({ email, handle }) {
 
   useEffect(() => {
     let live = true;
-    loadPassAssets().then((assets) => live && setPass({ email, handle, ...assets }));
+    loadPassAssets().then((assets) => live && setPass({ name, handle, ...assets }));
     return () => {
       live = false;
     };
-  }, [email, handle]);
+  }, [name, handle]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -87,7 +87,7 @@ export default function WaitlistTicket({ email, handle }) {
             {/* drop-shadow follows the notches; kept off the animated element's filter */}
             <div
               role="img"
-              aria-label={`Keep Yours waitlist pass for ${email}, @${handle}`}
+              aria-label={`Keep Yours waitlist pass for ${name}, @${handle}`}
               className="relative size-full drop-shadow-[0_16px_30px_rgba(8,45,28,0.2)]"
             >
               {LAYERS.map(([name]) => (

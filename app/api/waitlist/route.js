@@ -6,11 +6,14 @@ function parseSignup(body) {
   const email = typeof body?.email === "string" ? body.email.trim() : "";
   if (!EMAIL.test(email) || email.length > 254) return { error: "invalid email" };
 
+  const name = typeof body?.name === "string" ? body.name.trim() : "";
+  if (!name || name.length > 40) return { error: "invalid name" };
+
   const handle = typeof body?.handle === "string" ? body.handle.trim().replace(/^@+/, "") : "";
   if (!HANDLE.test(handle)) return { error: "invalid handle" };
   if (body?.consent !== true) return { error: "consent required" };
 
-  return { email, handle };
+  return { email, name, handle };
 }
 
 export async function POST(request) {
@@ -27,7 +30,7 @@ export async function POST(request) {
     return Response.json({ error: "bad request" }, { status: 400 });
   }
 
-  const { email, handle, error } = parseSignup(body);
+  const { email, name, handle, error } = parseSignup(body);
   if (error) return Response.json({ error }, { status: 400 });
 
   try {
@@ -39,7 +42,7 @@ export async function POST(request) {
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ email, handle, consent: true, source: "keepyours.xyz" }),
+      body: JSON.stringify({ email, name, handle, consent: true, source: "keepyours.xyz" }),
       redirect: "manual",
       signal: AbortSignal.timeout(50_000),
     });
