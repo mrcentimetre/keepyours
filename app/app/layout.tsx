@@ -44,14 +44,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <NoZoom />
       <ThemeSync />
       <AppShell>{children}</AppShell>
+      {/* Toasts as a small pill that drops in under the notch / Dynamic
+          Island — not a full-width box drawn over the clock. Unstyled, so
+          sonner's own card look doesn't fight ours; `!` because sonner's
+          CSS isn't in a Tailwind layer and would otherwise win. */}
       <Toaster
-        theme="dark"
         position="top-center"
+        duration={2200}
+        gap={8}
+        offset={{ top: "calc(env(safe-area-inset-top) + 10px)" }}
+        mobileOffset={{ top: "calc(env(safe-area-inset-top) + 10px)", left: 0, right: 0 }}
         toastOptions={{
-          style: {
-            background: "var(--card)",
-            border: "1px solid var(--border)",
-            color: "var(--foreground)",
+          unstyled: true,
+          classNames: {
+            toast:
+              "left-0! right-0! mx-auto! w-fit! max-w-[calc(100vw-32px)] flex items-center gap-2.5 rounded-full bg-popover/90 py-2.5 pr-4 pl-3 text-[14px] font-semibold text-popover-foreground shadow-float ring-1 ring-hairline backdrop-blur-xl",
+            icon: "m-0! size-5! flex items-center justify-center",
+            success: "[&_[data-icon]]:text-primary",
+            error: "[&_[data-icon]]:text-destructive",
+            warning: "[&_[data-icon]]:text-warning",
+            description: "text-[12px] font-normal text-muted-foreground",
           },
         }}
       />
