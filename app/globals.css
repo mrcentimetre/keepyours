@@ -48,10 +48,10 @@
      White text sits on these in both themes. */
   --hero: radial-gradient(95% 85% at 50% 8%, #14864d 0%, #0b4a2c 48%, #071a11 100%);
   --hero-card: radial-gradient(120% 120% at 85% 0%, #14864d 0%, #0b4a2c 50%, #071a11 100%);
-  --contour: rgba(98, 230, 160, 0.16);
+  --contour: rgba(98, 230, 160, 0.07);
   /* Flow screens: a green light from the top, and the lines in it. */
   --glow-tint: rgba(22, 184, 98, 0.32);
-  --glow-contour: rgba(98, 230, 160, 0.2);
+  --glow-contour: rgba(98, 230, 160, 0.08);
 
   --elev-card: 0 1px 0 0 rgba(255, 255, 255, 0.03) inset, 0 18px 40px -26px rgba(0, 0, 0, 0.85);
   --elev-float: 0 22px 44px -16px rgba(0, 0, 0, 0.9);
@@ -106,9 +106,9 @@ html[data-ky-theme="light"] .ky-app {
 
   --hero: radial-gradient(95% 85% at 50% 8%, #1bb063 0%, #0f8a4a 50%, #0b6a39 100%);
   --hero-card: radial-gradient(120% 120% at 85% 0%, #1bb063 0%, #0f8a4a 50%, #0b6a39 100%);
-  --contour: rgba(255, 255, 255, 0.16);
+  --contour: rgba(255, 255, 255, 0.08);
   --glow-tint: rgba(22, 184, 98, 0.16);
-  --glow-contour: rgba(15, 143, 76, 0.2);
+  --glow-contour: rgba(15, 143, 76, 0.08);
 }
 
 /* Everything BEHIND the app is Night too, whenever the app is on screen.
