@@ -81,25 +81,34 @@ export default function WaitlistTicket({ name, handle }) {
   const passLink = `${SITE}/pass?${passQuery({ name, handle })}`;
   const shareText = "I'm on the Keep Yours waitlist. Get paid. Keep yours.";
 
-  async function onShare() {
-    // Phones: hand the image itself to the share sheet, so it's attached
-    // to the post in the X app. Desktop share sheets rarely list X, so
-    // desktop goes straight to X with the link (and its pass card).
-    const file = fileRef.current;
-    const phone = window.matchMedia("(pointer: coarse)").matches;
-    if (phone && file && navigator.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], text: `${shareText} @keepyoursxyz ${passLink}` });
-        return;
-      } catch (err) {
-        if (err?.name === "AbortError") return; // they closed the sheet
-      }
-    }
+  const isPhone = () => window.matchMedia("(pointer: coarse)").matches;
+
+  // Straight to X — no share sheet to pick from. A web page can't attach an
+  // image to an X post, so the post carries the person's own link and X
+  // shows their pass as the card (app/pass/og). On a phone, a same-tab
+  // x.com link is a universal link: it opens the X app if installed.
+  function onShare() {
     const url = new URL("https://x.com/intent/post");
     url.searchParams.set("text", shareText);
     url.searchParams.set("url", passLink);
     url.searchParams.set("via", "keepyoursxyz");
-    window.open(url.toString(), "_blank", "noopener,noreferrer");
+    if (isPhone()) window.location.href = url.toString();
+    else window.open(url.toString(), "_blank", "noopener,noreferrer");
+  }
+
+  // Phones: the share sheet has "Save Image" (to Photos); a blob download
+  // in iOS Safari just opens a preview. Desktop keeps a normal download.
+  async function onSave() {
+    const file = fileRef.current;
+    if (isPhone() && file && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file] });
+      } catch {
+        // closed the sheet — nothing to do
+      }
+      return;
+    }
+    onDownload();
   }
 
   const button =
@@ -158,7 +167,7 @@ export default function WaitlistTicket({ name, handle }) {
           <div className="mt-6 flex justify-center gap-2.5 motion-safe:animate-rise" style={{ "--d": "0.86s" }}>
             <button
               type="button"
-              onClick={onDownload}
+              onClick={onSave}
               disabled={status === "working"}
               className={`${button} border border-green-deep bg-transparent text-green-deep`}
             >
