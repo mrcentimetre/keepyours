@@ -5,8 +5,10 @@ The waitlist is the home page of the Next.js app at the repo root.
 | File | What it is |
 |---|---|
 | `app/page.jsx` | The page itself (server component) |
-| `app/waitlist-form.jsx` | The email form (client component) |
-| `app/api/waitlist/route.js` | Server route that forwards the email to the sheet |
+| `app/waitlist-form.jsx` | The form: email, name, X handle (client component) |
+| `app/api/waitlist/route.js` | Server route that forwards a signup to the sheet |
+| `app/waitlist-ticket.jsx`, `app/ticket.js` | The pass shown after joining (name + @handle, never the email) |
+| `app/pass/` | `/pass?n=&h=` share link; `og/` draws that person's pass as the X card |
 | `app/globals.css` | Tailwind import, brand tokens (`@theme`), page background |
 | `public/` | `logo-128.png`, `logo-256.png`, `apple-icon.png`, `og-banner.png`; originals in `brand/` |
 
@@ -21,16 +23,38 @@ The route reads one environment variable, `WAITLIST_ENDPOINT`. Set it locally in
 environments).
 
 **Google Sheets (free, unlimited)**
-1. New Sheet → Extensions → Apps Script, paste:
+1. New Sheet → Extensions → Apps Script, paste (replacing everything):
    ```js
-   function doPost(e){
+   const HEADERS = ['Joined', 'Name', 'X handle', 'Email', 'OK to tag on X', 'Source'];
+
+   function doPost(e) {
      const sheet = SpreadsheetApp.getActiveSheet();
+     if (sheet.getLastRow() === 0) sheet.appendRow(HEADERS);
+
      const body = JSON.parse(e.postData.contents);
-     sheet.appendRow([new Date(), body.email, body.source || '']);
-     return ContentService.createTextOutput(JSON.stringify({ok:true}))
+     const handle = String(body.handle || '').replace(/^@+/, '');
+     sheet.appendRow([
+       new Date(),
+       // A leading = + - @ would run as a formula in the sheet; ' keeps it text.
+       safe(body.name),
+       handle ? '@' + handle : '',
+       safe(body.email),
+       body.consent === true ? 'yes' : 'no',
+       safe(body.source),
+     ]);
+     return ContentService.createTextOutput(JSON.stringify({ ok: true }))
        .setMimeType(ContentService.MimeType.JSON);
    }
+
+   function safe(v) {
+     const s = String(v || '');
+     return /^[=+\-@]/.test(s) ? "'" + s : s;
+   }
    ```
+   `@handle` is written starting with `@` on purpose: `appendRow` stores it as
+   plain text, and it reads right in the sheet. An existing sheet with the old
+   `Joined | Email | Source` columns: add the new header row by hand, or start
+   a fresh tab.
 2. Deploy → New deployment → Web app → execute as me, access "anyone" → copy the
    `/exec` URL into `WAITLIST_ENDPOINT`.
 3. Every time the script changes, deploy a **new version** — editing alone does
@@ -61,4 +85,5 @@ project; the waitlist stays at `/` until launch.
 - **No fake counts.** Don't add "join 2,000 others" until 2,000 people have
   actually joined. When the number is real and worth showing, add it under the form.
 - Keep it one screen on a phone. Every extra section costs sign-ups.
-- The only ask is the email. No name, no wallet, no country.
+- The asks are email, name and X handle — the name and handle go on the
+  shareable pass, the email never does. No wallet, no country.
