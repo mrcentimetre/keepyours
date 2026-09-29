@@ -42,7 +42,7 @@ export default function Hero() {
       }`}
       onAnimationEnd={(e) => e.target === e.currentTarget && leaving && setJoined(leaving)}
     >
-      <Badge preset="keep" tag="Soon">
+      <Badge tag="Soon">
         Launching on Arbitrum One
       </Badge>
 

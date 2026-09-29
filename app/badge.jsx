@@ -1,36 +1,18 @@
-"use client";
-
-import { useEffect, useRef } from "react";
-import { registerBadge } from "./badge-renderer";
-import { FALLBACK } from "./badge-shaders";
-
-export default function Badge({ preset = "keep", tag, children }) {
-  const canvasRef = useRef(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    return registerBadge(canvas, preset) ?? undefined;
-  }, [preset]);
-
+// Launch eyebrow above the headline. A soft green chip in the headline's
+// own green, with a live pulse dot — not a dark box sitting on the white
+// page, which read as pasted-on.
+export default function Badge({ tag, children }) {
   return (
-    // Light glass, like the cards below it: a solid black pill shouted over
-    // the white page. The green "Soon" chip stays the one bold thing.
-    <span className="inline-flex items-center gap-2.5 rounded-[12px] border border-white/80 bg-white/65 p-1 pr-3.5 text-[15px] leading-none text-ink shadow-[0_8px_22px_-14px_rgba(8,45,28,0.35)] backdrop-blur-[10px]">
-      <span
-        className="relative isolate overflow-hidden rounded-[8px] px-2.5 py-[7px] font-semibold"
-        style={{ background: FALLBACK[preset] }}
-      >
-        <canvas
-          ref={canvasRef}
-          aria-hidden="true"
-          className="absolute inset-0 -z-10 block h-full w-full"
-        />
-        <span className="[text-shadow:0_0_6px_rgb(0_0_0/0.45),0_1px_1px_rgb(0_0_0/0.25)]">
-          {tag}
-        </span>
+    <span className="inline-flex items-center gap-2 rounded-full border border-green/25 bg-green/[0.08] py-1.5 pr-3.5 pl-3 text-[13.5px] leading-none text-green-deep">
+      <span className="relative flex size-2" aria-hidden="true">
+        <span className="absolute inset-0 rounded-full bg-green opacity-60 motion-safe:animate-ping" />
+        <span className="relative size-2 rounded-full bg-green" />
       </span>
-      <span className="whitespace-nowrap">{children}</span>
+      <span className="font-semibold">{tag}</span>
+      <span className="h-3.5 w-px bg-green/30" aria-hidden="true" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/arbitrum-logo.svg" alt="" width={12} height={14} className="block h-3.5 w-auto" />
+      <span className="whitespace-nowrap font-medium">{children}</span>
     </span>
   );
 }
