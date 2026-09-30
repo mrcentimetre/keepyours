@@ -44,9 +44,9 @@ contract AdvancePool is IAdvancePool, Ownable, ReentrancyGuardTransient {
     uint256 public totalWithdrawn;
     uint256 public totalOutstanding;
 
-    event FactorySet(address factory);
+    event FactorySet(address indexed factory);
     event Funded(uint256 amount);
-    event UnlentWithdrawn(uint256 amount, address to);
+    event UnlentWithdrawn(uint256 amount, address indexed to);
     event Lent(address indexed vault, address to, uint256 amount);
     event AdvanceRepaid(address indexed vault, uint256 principal, uint256 fee);
     event Settled(address indexed vault, uint256 owed);
