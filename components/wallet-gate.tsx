@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Fingerprint, KeyRound, Loader2, ShieldCheck, Sparkles, TriangleAlert } from "lucide-react";
 import { usePasskeyWallet, hasExistingPasskey } from "@/hooks/use-passkey-wallet";
+import type { Address } from "viem";
 import { hasCompletedSetup } from "@/lib/vault-settings";
+import { isVaultConfigured, readVault, vaultOf } from "@/lib/vault";
 import SecondDeviceNotice from "./second-device-notice";
 import { FlowScreen, IconOrb, FlowTitle, FlowBody, BrandMark } from "./app/flow";
 import { Button } from "./ui/button";
@@ -13,11 +15,27 @@ const SEEN_NOTICE_KEY = "ky_seen_second_device_notice";
 
 /** Past the wallet gate entirely: hand off to Setup (T3.1) on a fresh
  * wallet, or straight to Home (T3.2) for one that's already configured. */
-function Redirecting() {
+function Redirecting({ address }: { address: Address }) {
   const router = useRouter();
   useEffect(() => {
-    router.replace(hasCompletedSetup() ? "/app/home" : "/app/setup");
-  }, [router]);
+    let cancelled = false;
+    (async () => {
+      let done = hasCompletedSetup();
+      if (isVaultConfigured()) {
+        try {
+          const vault = await vaultOf(address);
+          done = vault !== null;
+          if (vault) await readVault(vault); // caches its settings for the screens
+        } catch {
+          // Chain unreachable: fall back to what this phone remembers.
+        }
+      }
+      if (!cancelled) router.replace(done ? "/app/home" : "/app/setup");
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [router, address]);
   return null;
 }
 
@@ -81,7 +99,7 @@ export default function WalletGate() {
   }
 
   if (status === "ready" && address) {
-    return <Redirecting />;
+    return <Redirecting address={address} />;
   }
 
   const busy = status === "connecting";

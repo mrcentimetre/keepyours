@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CircleCheck } from "lucide-react";
+import type { Address } from "viem";
+import { CircleCheck, Loader2 } from "lucide-react";
 import {
   DEFAULT_SETTINGS,
   COOLDOWN_PRESETS,
@@ -10,6 +11,8 @@ import {
   type VaultSettings,
 } from "@/lib/vault-settings";
 import { cn } from "@/lib/utils";
+import { getCachedAddress } from "@/hooks/use-passkey-wallet";
+import { createVaultCall, isVaultConfigured, plainTxError, sendWithPasskey, vaultOf } from "@/lib/vault";
 import { FlowScreen, FlowTitle, FlowBody, BrandMark } from "./app/flow";
 import { SectionLabel } from "./app/screen";
 import { Card } from "./ui/card";
@@ -21,14 +24,34 @@ export default function SetupScreen() {
   const router = useRouter();
   const [keepBps, setKeepBps] = useState(DEFAULT_SETTINGS.keepBps);
   const [cooldownSeconds, setCooldownSeconds] = useState(DEFAULT_SETTINGS.cooldownSeconds);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const keepPct = Math.round(keepBps / 100);
   const spendPct = 100 - keepPct;
 
-  function confirm() {
+  async function confirm() {
     const settings: VaultSettings = { keepBps, cooldownSeconds };
-    saveVaultSettings(settings);
-    router.push("/app/home");
+    const owner = getCachedAddress();
+    if (!owner || !isVaultConfigured()) {
+      // No contracts configured (local dev without .env): keep the old mock flow.
+      saveVaultSettings(settings);
+      router.push("/app/home");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      // Signed in with an existing passkey on a new phone: the vault is already there.
+      if (!(await vaultOf(owner))) {
+        await sendWithPasskey(owner, createVaultCall(owner, keepBps, cooldownSeconds));
+      }
+      saveVaultSettings(settings);
+      router.push("/app/home");
+    } catch (e) {
+      setError(plainTxError(e));
+      setBusy(false);
+    }
   }
 
   return (
@@ -113,9 +136,17 @@ export default function SetupScreen() {
         </div>
       </div>
 
-      <Button size="lg" onClick={confirm} className="w-full">
-        Continue
-      </Button>
+      <div className="flex flex-col gap-3">
+        {error && (
+          <p role="alert" className="rounded-2xl bg-destructive/10 px-4 py-3 text-[13px] leading-relaxed text-destructive ring-1 ring-destructive/25">
+            {error}
+          </p>
+        )}
+        <Button size="lg" onClick={confirm} disabled={busy} className="w-full">
+          {busy && <Loader2 className="animate-spin" />}
+          {busy ? "Creating your vault…" : "Create my vault"}
+        </Button>
+      </div>
     </FlowScreen>
   );
 }
