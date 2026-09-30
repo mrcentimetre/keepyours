@@ -8,6 +8,7 @@ import {
   Bell,
   ChevronRight,
   Send,
+  Loader2,
   Lock,
   Plus,
   QrCode as QrIcon,
@@ -17,6 +18,9 @@ import {
 import { toast } from "sonner";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import { useUsdcBalance } from "@/hooks/use-usdc-balance";
+import { useVault } from "@/hooks/use-vault";
+import { plainTxError, processCall, sendWithPasskey } from "@/lib/vault";
+import type { Address } from "viem";
 import { getVaultSettings, DEFAULT_SETTINGS, type VaultSettings } from "@/lib/vault-settings";
 import {
   getPayments,
@@ -210,7 +214,17 @@ export default function HomeScreen() {
   const name = useProfileName();
   const [alertsOpen, setAlertsOpen] = useState(false);
   // Spendable money is real: read from the chain, not the mock layer.
-  const { balance: walletBalance } = useUsdcBalance(address);
+  const { balance: walletBalance, refresh: refreshWallet } = useUsdcBalance(address);
+  // Savings are real once the vault exists; until then the mock layer fills in.
+  const { payTo, state: vault, refresh: refreshVault } = useVault(address);
+  const [splitting, setSplitting] = useState(false);
+
+  useEffect(() => {
+    if (!vault) return;
+    setSettings({ keepBps: vault.keepBps, cooldownSeconds: vault.cooldownSeconds });
+    setPending(vault.pending && { amountUsdc: vault.pending.amount, requestedAt: vault.pending.requestedAt, releaseAt: vault.pending.releaseAt });
+    setAdvance(vault.advance && { amountUsdc: vault.advance.principal, takenAt: vault.advance.startedAt });
+  }, [vault]);
 
   function refresh() {
     setPayments(getPayments());
@@ -237,8 +251,22 @@ export default function HomeScreen() {
 
   const keepPct = Math.round(settings.keepBps / 100);
   const spendPct = 100 - keepPct;
-  const kept = getKeptBalance();
+  const kept = vault ? vault.saved : getKeptBalance();
   const spendable = walletBalance ?? 0;
+
+  async function splitNow() {
+    if (!vault) return;
+    setSplitting(true);
+    try {
+      await sendWithPasskey(address as Address, processCall(vault.address));
+      toast.success("Split done");
+      await Promise.all([refreshVault(), refreshWallet()]);
+    } catch (e) {
+      toast.error(plainTxError(e));
+    } finally {
+      setSplitting(false);
+    }
+  }
 
   function simulatePayment() {
     const p = addSimulatedPayment(100, settings.keepBps);
@@ -320,6 +348,25 @@ export default function HomeScreen() {
       </section>
 
       <div className="flex flex-col gap-6 px-5 pt-6">
+        {/* ── Arrived, not split yet ────────────────────────── */}
+        {vault && vault.unprocessed > 0 && (
+          <div className="flex items-center gap-3 rounded-[20px] bg-primary/10 p-4 ring-1 ring-primary/25">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
+              <ArrowDownLeft className="size-5" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[14px] font-semibold">${formatUsdc(vault.unprocessed)} arrived</span>
+              <span className="block text-[12px] text-muted-foreground">
+                Split it {spendPct}/{keepPct} now
+              </span>
+            </span>
+            <Button size="sm" onClick={splitNow} disabled={splitting}>
+              {splitting && <Loader2 className="animate-spin" />}
+              {splitting ? "Splitting" : "Split"}
+            </Button>
+          </div>
+        )}
+
         {/* ── In progress ───────────────────────────────────── */}
         {(pending || advance) && (
           <div className="flex flex-col gap-3">
@@ -358,10 +405,12 @@ export default function HomeScreen() {
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-[18px] font-extrabold tracking-[-0.02em]">Activity</h2>
-            <Button variant="secondary" size="sm" onClick={simulatePayment}>
-              <Plus className="size-4" />
-              Test payment
-            </Button>
+            {!vault && (
+              <Button variant="secondary" size="sm" onClick={simulatePayment}>
+                <Plus className="size-4" />
+                Test payment
+              </Button>
+            )}
           </div>
 
           {payments.length === 0 ? (
@@ -403,7 +452,7 @@ export default function HomeScreen() {
         </section>
       </div>
 
-      <GetPaidSheet open={getPaidOpen} onOpenChange={setGetPaidOpen} address={address} />
+      <GetPaidSheet open={getPaidOpen} onOpenChange={setGetPaidOpen} address={payTo ?? address} />
       <ProfileSheet open={profileOpen} onOpenChange={setProfileOpen} address={address} />
 
       <Sheet open={alertsOpen} onOpenChange={setAlertsOpen}>
