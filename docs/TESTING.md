@@ -87,3 +87,26 @@ Run random sequences of deposits, `process`, `advance`, `requestWithdraw`, `canc
 - Slither clean, or every finding explained in a comment.
 - Deposit cap set, and the advance pool funded with a small amount only.
 - Deploy in the order in `CONTRACTS.md`, verify on Arbiscan, then run the manual list again with $5.
+
+
+## Where the tests live
+
+| File | What |
+|---|---|
+| `contracts/test/KeepVault.t.sol` | Vault unit tests + split fuzz (pool mocked) |
+| `contracts/test/AdvancePool.t.sol` | Factory and pool unit tests against the real vault, including every fee boundary and a full journey |
+| `contracts/test/invariant/` | Handler, a USDC that flags transfers to the wrong place, and the invariant suite (128 runs × 256 calls) |
+
+**The invariant suite has been checked against planted bugs** (30 Sep 2026). Each of these was caught: a withdrawal paid to `spendTo`, a shorter cooldown treated as stronger, `withdrawable` ignoring an advance, a fee above 3%, and the deposit cap not enforced. Rerun that check after any change to the handler, because a handler that never reaches a path passes without testing it.
+
+## Slither review (30 Sep 2026)
+
+`cd contracts && slither .` (config in `slither.config.json`). 13 results, none needing a code change:
+
+| Detector | Where | Why it's fine |
+|---|---|---|
+| `incorrect-equality` | `== 0` checks in `process`, `guardianApprove`, `feeBpsNow`, `_record` | Sentinel checks for "nothing there". Someone sending USDC to a vault only makes `process` split it, which is its job. |
+| `reentrancy-no-eth`, `reentrancy-benign` | `AdvancePool.settle` | The vault must check the amount against `owedNow` before the pool books it, so the call comes first. The vault is factory-made fixed code that only transfers USDC to the pool, and every pool entry point is `nonReentrant`. |
+| `timestamp` | Waiting period, settings delay, fee tiers, settle | Every window is days long; a validator shifting time by seconds changes nothing that matters. |
+
+Fixed from the first run: two event address parameters are now `indexed`.
