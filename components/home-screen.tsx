@@ -19,6 +19,9 @@ import { toast } from "sonner";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import { useUsdcBalance } from "@/hooks/use-usdc-balance";
 import { useVault } from "@/hooks/use-vault";
+import { useActivity } from "@/hooks/use-activity";
+import { useNotificationPermission } from "@/hooks/use-notification-permission";
+import ActivityList from "./activity-list";
 import { isVaultConfigured, plainTxError, processCall, sendWithPasskey } from "@/lib/vault";
 import type { Address } from "viem";
 import { getVaultSettings, DEFAULT_SETTINGS, type VaultSettings } from "@/lib/vault-settings";
@@ -218,6 +221,15 @@ export default function HomeScreen() {
   // Savings are real once the vault exists; until then the mock layer fills in.
   const { payTo, state: vault, refresh: refreshVault, autoSplitFailed } = useVault(address);
   const [splitting, setSplitting] = useState(false);
+  const { items: activity, unread, seenAt, markSeen } = useActivity(address, vault?.address ?? null);
+  const { permission, ask } = useNotificationPermission();
+
+  // Tick "2 min ago" labels while there's live activity on screen.
+  useEffect(() => {
+    if (!activity) return;
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, [activity]);
 
   useEffect(() => {
     if (!vault) return;
@@ -274,6 +286,13 @@ export default function HomeScreen() {
     toast.success(`$100 test payment split: $${formatUsdc(p.spentUsdc)} to spend, $${formatUsdc(p.keptUsdc)} kept`);
   }
 
+  // First tap on the bell asks for notifications (native prompt), then opens the list.
+  async function openAlerts() {
+    if (permission === "default") await ask();
+    setNow(Date.now());
+    setAlertsOpen(true);
+  }
+
   const alerts = [
     pending && {
       icon: <Timer className="size-4" />,
@@ -319,11 +338,11 @@ export default function HomeScreen() {
               variant="glass"
               size="icon"
               className="relative size-11"
-              onClick={() => setAlertsOpen(true)}
+              onClick={openAlerts}
               aria-label="Notifications"
             >
               <Bell />
-              {alerts.length > 0 && (
+              {(vault ? unread > 0 : alerts.length > 0) && (
                 <span className="absolute top-2.5 right-2.5 size-2 rounded-full bg-warning ring-2 ring-[#0d4429]" />
               )}
             </Button>
@@ -417,7 +436,28 @@ export default function HomeScreen() {
             )}
           </div>
 
-          {payments.length === 0 ? (
+          {vault ? (
+            activity === null ? (
+              <Skeleton className="h-[180px]" />
+            ) : activity.length === 0 ? (
+              <Card className="flex flex-col items-center gap-3 px-6 py-9 text-center">
+                <span className="flex size-14 items-center justify-center rounded-full bg-primary/12 text-primary">
+                  <QrIcon className="size-6" />
+                </span>
+                <div>
+                  <p className="text-[15px] font-semibold">No payments yet</p>
+                  <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">
+                    Share your Get paid address with a client. Each payment splits the moment it lands.
+                  </p>
+                </div>
+                <Button variant="secondary" size="sm" onClick={() => setGetPaidOpen(true)} className="mt-1">
+                  Show my QR
+                </Button>
+              </Card>
+            ) : (
+              <ActivityList items={activity.slice(0, 20)} now={now} />
+            )
+          ) : payments.length === 0 ? (
             <Card className="flex flex-col items-center gap-3 px-6 py-9 text-center">
               <span className="flex size-14 items-center justify-center rounded-full bg-primary/12 text-primary">
                 <QrIcon className="size-6" />
@@ -459,9 +499,35 @@ export default function HomeScreen() {
       <GetPaidSheet open={getPaidOpen} onOpenChange={setGetPaidOpen} address={isVaultConfigured() ? payTo : address} />
       <ProfileSheet open={profileOpen} onOpenChange={setProfileOpen} address={address} />
 
-      <Sheet open={alertsOpen} onOpenChange={setAlertsOpen}>
+      <Sheet
+        open={alertsOpen}
+        onOpenChange={(open) => {
+          setAlertsOpen(open);
+          if (!open) markSeen();
+        }}
+      >
         <SheetContent title="Notifications">
-          {alerts.length === 0 ? (
+          {vault ? (
+            <div className="flex flex-col gap-4">
+              {permission === "denied" && (
+                <p className="rounded-2xl bg-warning/10 px-4 py-3 text-[12.5px] leading-relaxed text-warning ring-1 ring-warning/25">
+                  Phone notifications are off. To turn them on: Settings → Notifications → Keep Yours → Allow Notifications.
+                </p>
+              )}
+              {permission === "default" && (
+                <Button variant="secondary" onClick={ask} className="w-full">
+                  <Bell /> Tell me when money arrives
+                </Button>
+              )}
+              {activity && activity.length > 0 ? (
+                <ActivityList items={activity.slice(0, 15)} now={now} unreadAfter={seenAt} className="bg-surface-2/50" />
+              ) : (
+                <p className="py-6 text-center text-[13px] text-muted-foreground">
+                  Nothing yet. Payments, advances and withdrawals show up here.
+                </p>
+              )}
+            </div>
+          ) : alerts.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-6 text-center">
               <span className="flex size-12 items-center justify-center rounded-full bg-surface-2 text-muted-foreground">
                 <Bell className="size-5" />
