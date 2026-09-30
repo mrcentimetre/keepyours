@@ -19,7 +19,7 @@ import { toast } from "sonner";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import { useUsdcBalance } from "@/hooks/use-usdc-balance";
 import { useVault } from "@/hooks/use-vault";
-import { plainTxError, processCall, sendWithPasskey } from "@/lib/vault";
+import { isVaultConfigured, plainTxError, processCall, sendWithPasskey } from "@/lib/vault";
 import type { Address } from "viem";
 import { getVaultSettings, DEFAULT_SETTINGS, type VaultSettings } from "@/lib/vault-settings";
 import {
@@ -456,7 +456,7 @@ export default function HomeScreen() {
         </section>
       </div>
 
-      <GetPaidSheet open={getPaidOpen} onOpenChange={setGetPaidOpen} address={payTo ?? address} />
+      <GetPaidSheet open={getPaidOpen} onOpenChange={setGetPaidOpen} address={isVaultConfigured() ? payTo : address} />
       <ProfileSheet open={profileOpen} onOpenChange={setProfileOpen} address={address} />
 
       <Sheet open={alertsOpen} onOpenChange={setAlertsOpen}>

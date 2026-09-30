@@ -114,7 +114,7 @@ export default function ProfileSheet({
 
           {address && (
             <div className="flex flex-col gap-2">
-              <p className="px-1 text-[13px] font-semibold">Wallet address</p>
+              <p className="px-1 text-[13px] font-semibold">Spending wallet address</p>
               <button
                 type="button"
                 onClick={copy}
@@ -123,6 +123,9 @@ export default function ProfileSheet({
                 <span className="flex-1 font-mono text-[12.5px] leading-relaxed break-all text-foreground/90">{address}</span>
                 {copied ? <Check className="size-5 shrink-0 text-primary" /> : <Copy className="size-5 shrink-0 text-muted-foreground" />}
               </button>
+              <p className="px-1 text-[12px] leading-relaxed text-muted-foreground">
+                Your spending wallet. Money sent here isn&apos;t split. To get paid, share the address from Get paid on Home.
+              </p>
             </div>
           )}
 
