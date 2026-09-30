@@ -1,9 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowDown, Lock, Timer } from "lucide-react";
+import type { Address } from "viem";
+import { ArrowDown, Loader2, Lock, Timer } from "lucide-react";
 import { toast } from "sonner";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
+import { useVault } from "@/hooks/use-vault";
+import {
+  cancelWithdrawCall,
+  executeWithdrawCall,
+  plainTxError,
+  requestWithdrawCall,
+  sendWithPasskey,
+} from "@/lib/vault";
 import { getKeptBalance } from "@/lib/mock-activity";
 import { getVaultSettings, DEFAULT_SETTINGS } from "@/lib/vault-settings";
 import {
@@ -56,6 +65,34 @@ export default function WithdrawScreen() {
   const [amount, setAmount] = useState("");
   const [reviewOpen, setReviewOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const [busy, setBusy] = useState(false);
+  const [slideKey, setSlideKey] = useState(0);
+  const { state: vault, refresh: refreshVault } = useVault(address);
+
+  // Real vault: what can leave now is savings minus what an open advance reserves.
+  useEffect(() => {
+    if (!vault) return;
+    setBalance(vault.withdrawable);
+    setCooldownSeconds(vault.cooldownSeconds);
+    setPending(vault.pending && { amountUsdc: vault.pending.amount, requestedAt: vault.pending.requestedAt, releaseAt: vault.pending.releaseAt });
+  }, [vault]);
+
+  /** One vault transaction behind Face ID. Returns true if it went through. */
+  async function run(build: (vault: Address) => { to: Address; data: `0x${string}` }): Promise<boolean> {
+    if (!vault) return false;
+    setBusy(true);
+    try {
+      await sendWithPasskey(address as Address, build(vault.address));
+      await refreshVault();
+      return true;
+    } catch (e) {
+      toast.error(plainTxError(e));
+      setSlideKey((k) => k + 1); // let them slide again
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
 
   function refresh() {
     setBalance(getKeptBalance());
@@ -93,8 +130,16 @@ export default function WithdrawScreen() {
         ]
       : [];
 
-  function start() {
+  async function start() {
     if (!amountValid) return;
+    if (vault) {
+      if (await run((v) => requestWithdrawCall(v, amount))) {
+        setAmount("");
+        setReviewOpen(false);
+        toast.success("Waiting period started");
+      }
+      return;
+    }
     requestWithdrawal(value);
     // Let the slide's check mark land before the sheet drops away — and only
     // clear the amount then, or the sheet flashes "$0.00" on its way out.
@@ -106,14 +151,22 @@ export default function WithdrawScreen() {
     }, 350);
   }
 
-  function cancel() {
+  async function cancel() {
+    if (vault) {
+      if (await run(cancelWithdrawCall)) toast.success("Withdrawal cancelled. Your savings stay put.");
+      return;
+    }
     cancelWithdrawal();
     refresh();
     toast.success("Withdrawal cancelled. Your savings stay put.");
   }
 
-  function send() {
+  async function send() {
     const amt = pending?.amountUsdc ?? 0;
+    if (vault) {
+      if (await run(executeWithdrawCall)) toast.success(`Sent $${formatUsdc(amt)} to your wallet`);
+      return;
+    }
     executeWithdrawal();
     refresh();
     toast.success(`Sent $${formatUsdc(amt)} to your wallet`);
@@ -146,7 +199,7 @@ export default function WithdrawScreen() {
           <p className="mt-6 max-w-[34ch] text-center text-[13px] leading-relaxed text-muted-foreground">
             {released
               ? "The waiting period is over. Send it whenever you're ready."
-              : "An alert was sent. If this wasn't you, cancel — nothing leaves until the timer ends."}
+              : "If this wasn't you, cancel. Nothing leaves until the timer ends."}
           </p>
         </Card>
 
@@ -164,11 +217,13 @@ export default function WithdrawScreen() {
         </Card>
 
         {released ? (
-          <Button onClick={send} className="w-full">
+          <Button onClick={send} disabled={busy} className="w-full">
+            {busy && <Loader2 className="animate-spin" />}
             Send to my wallet
           </Button>
         ) : (
-          <Button onClick={cancel} variant="destructive" className="w-full">
+          <Button onClick={cancel} disabled={busy} variant="destructive" className="w-full">
+            {busy && <Loader2 className="animate-spin" />}
             Cancel withdrawal
           </Button>
         )}
@@ -254,7 +309,14 @@ export default function WithdrawScreen() {
             <p className="rounded-2xl bg-warning/10 px-4 py-3 text-[12.5px] leading-relaxed text-warning ring-1 ring-warning/25">
               Your money waits here first. You can cancel any time before it releases.
             </p>
-            <SlideToConfirm label="Slide to start" onConfirm={start} />
+            {busy ? (
+              <Button size="lg" disabled className="w-full">
+                <Loader2 className="animate-spin" />
+                Starting…
+              </Button>
+            ) : (
+              <SlideToConfirm key={slideKey} label="Slide to start" onConfirm={start} />
+            )}
           </div>
         </SheetContent>
       </Sheet>
