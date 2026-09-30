@@ -5,6 +5,7 @@ import type { Address } from "viem";
 import {
   createPasskeyWallet,
   loginPasskeyWallet,
+  forgetWebAuthnKey,
   isZeroDevConfigured,
   type PasskeyWallet,
 } from "@/lib/zerodev";
@@ -59,6 +60,7 @@ export function signOut() {
     localStorage.removeItem(CACHED_ADDRESS_KEY);
     localStorage.setItem(HAS_PASSKEY_KEY, "1");
   } catch {}
+  forgetWebAuthnKey();
   setProfileName("");
 }
 
