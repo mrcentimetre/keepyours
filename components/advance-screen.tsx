@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BadgeCheck, Zap } from "lucide-react";
+import type { Address } from "viem";
+import { getCachedAddress } from "@/hooks/use-passkey-wallet";
+import { useVault } from "@/hooks/use-vault";
+import { advanceCall, maxAdvance, plainTxError, repayNowCalls, sendWithPasskey, type Call } from "@/lib/vault";
+import { BadgeCheck, Loader2, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { getKeptBalance } from "@/lib/mock-activity";
 import {
@@ -97,6 +101,33 @@ export default function AdvanceScreen() {
   const [amount, setAmount] = useState(0);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const [owner, setOwner] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [slideKey, setSlideKey] = useState(0);
+  const { state: vault, refresh: refreshVault } = useVault(owner);
+
+  // Real vault: savings, the open advance and its fee come from the chain.
+  useEffect(() => {
+    if (!vault) return;
+    setBalance(vault.saved);
+    setAdvance(vault.advance && { amountUsdc: vault.advance.principal, takenAt: vault.advance.startedAt });
+    setNow(Date.now());
+  }, [vault]);
+
+  async function run(call: Call | Call[]): Promise<boolean> {
+    setBusy(true);
+    try {
+      await sendWithPasskey(owner as Address, call);
+      await refreshVault();
+      return true;
+    } catch (e) {
+      toast.error(plainTxError(e));
+      setSlideKey((k) => k + 1);
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
 
   function refresh() {
     setBalance(getKeptBalance());
@@ -110,6 +141,7 @@ export default function AdvanceScreen() {
 
   useEffect(() => {
     setMounted(true);
+    setOwner(getCachedAddress());
     refresh();
   }, []);
 
@@ -123,14 +155,24 @@ export default function AdvanceScreen() {
 
   if (!mounted) return <AdvanceSkeleton />;
 
-  const max = getMaxAdvance();
+  const max = vault ? maxAdvance(vault) : getMaxAdvance();
+  // One fee tier: 30 days on mainnet, minutes on the testnet deployment.
+  const tierMs = vault ? vault.feePeriodSeconds * 1000 : 30 * DAY_MS;
   const value = Math.min(amount, max);
   const amountValid = value > 0;
   // Round dollar amounts under the limit, then the limit itself.
   const picks = [...[10, 25, 50, 100].filter((n) => n < max), round2(max)].slice(-4);
 
-  function borrow() {
+  async function borrow() {
     if (!amountValid) return;
+    if (vault) {
+      if (await run(advanceCall(vault.address, value.toFixed(2)))) {
+        setAmount(0);
+        setReviewOpen(false);
+        toast.success(`$${formatUsdc(value)} sent to your wallet`);
+      }
+      return;
+    }
     requestAdvance(value);
     setTimeout(() => {
       setAmount(0);
@@ -140,7 +182,11 @@ export default function AdvanceScreen() {
     }, 350);
   }
 
-  function repay() {
+  async function repay() {
+    if (vault?.advance) {
+      if (await run(repayNowCalls(vault.address, vault.advance.owedNow))) toast.success("Advance repaid");
+      return;
+    }
     repayAdvance();
     refresh();
     toast.success("Advance repaid");
@@ -148,9 +194,11 @@ export default function AdvanceScreen() {
 
   // ── Open advance ────────────────────────────────────────────
   if (advance) {
-    const day = daysElapsed(advance.takenAt, now);
-    const overdue = isOverdue(advance.takenAt, now);
-    const feeBps = getFeeBps(advance.takenAt, now);
+    // "Days" scale with the tier length, so testnet shows the same 90-day story in minutes.
+    const day = vault ? Math.max(0, Math.floor(((now - advance.takenAt) / tierMs) * 30)) : daysElapsed(advance.takenAt, now);
+    const overdue = vault ? now - advance.takenAt > 3 * tierMs : isOverdue(advance.takenAt, now);
+    const feeBps = vault?.advance ? vault.advance.feeBps : getFeeBps(advance.takenAt, now);
+    const feeOwed = vault?.advance ? Math.max(0, vault.advance.owedNow - vault.advance.principal) : getFeeOwed(advance, now);
 
     return (
       <Screen>
@@ -179,7 +227,7 @@ export default function AdvanceScreen() {
               {feeBps === 0 ? (
                 <span className="text-primary">Free</span>
               ) : (
-                <span className="text-warning">${formatUsdc(getFeeOwed(advance, now))}</span>
+                <span className="text-warning">${formatUsdc(feeOwed)}</span>
               )}
             </Row>
             <Row label="Repayment">Next payment, before the split</Row>
@@ -187,8 +235,9 @@ export default function AdvanceScreen() {
           </CardRows>
         </Card>
 
-        <Button onClick={repay} variant="outline" className="w-full">
-          Repay now (simulate)
+        <Button onClick={repay} disabled={busy} variant="outline" className="w-full">
+          {busy && <Loader2 className="animate-spin" />}
+          {vault ? `Repay $${formatUsdc(vault.advance?.owedNow ?? 0)} now from my wallet` : "Repay now (simulate)"}
         </Button>
       </Screen>
     );
@@ -285,17 +334,17 @@ export default function AdvanceScreen() {
             <ol className="relative flex flex-col gap-4 pl-6">
               <span aria-hidden="true" className="absolute top-2 bottom-2 left-[7px] w-0.5 rounded-full bg-surface-2" />
               {[
-                { dot: "bg-primary", title: "Free", when: `until ${formatShortDate(now + 30 * DAY_MS)}`, cost: "$0.00" },
+                { dot: "bg-primary", title: "Free", when: `until ${formatShortDate(now + tierMs)}`, cost: "$0.00" },
                 {
                   dot: "bg-warning/70",
                   title: "1.5% fee",
-                  when: `until ${formatShortDate(now + 60 * DAY_MS)}`,
+                  when: `until ${formatShortDate(now + 2 * tierMs)}`,
                   cost: `$${formatUsdc(round2(value * 0.015))}`,
                 },
                 {
                   dot: "bg-warning",
                   title: "3% fee",
-                  when: `until ${formatShortDate(now + 90 * DAY_MS)}`,
+                  when: `until ${formatShortDate(now + 3 * tierMs)}`,
                   cost: `$${formatUsdc(round2(value * 0.03))}`,
                 },
               ].map((s) => (
@@ -326,7 +375,7 @@ export default function AdvanceScreen() {
           <div className="flex flex-col gap-5">
             <div className="text-center">
               <Money value={value || 0} className="block text-[40px] font-semibold" centsClassName="text-[26px]" />
-              <p className="mt-1 text-[13px] text-muted-foreground">to your spending balance, right away</p>
+              <p className="mt-1 text-[13px] text-muted-foreground">to your wallet, right away</p>
             </div>
             <Card className="bg-surface-2/50 p-4">
               <SectionLabel className="mb-3">Fee schedule</SectionLabel>
@@ -341,7 +390,14 @@ export default function AdvanceScreen() {
                 <Row label="Your savings">Locked until repaid</Row>
               </CardRows>
             </Card>
-            <SlideToConfirm label="Slide to borrow" onConfirm={borrow} />
+            {busy ? (
+              <Button size="lg" disabled className="w-full">
+                <Loader2 className="animate-spin" />
+                Borrowing…
+              </Button>
+            ) : (
+              <SlideToConfirm key={slideKey} label="Slide to borrow" onConfirm={borrow} />
+            )}
           </div>
         </SheetContent>
       </Sheet>
