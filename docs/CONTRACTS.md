@@ -24,11 +24,11 @@ address pool;       // the AdvancePool, passed in by the factory
 
 uint256 saved;      // USDC that has been through process() and kept
 
-struct Pending { uint256 amount; uint64 releaseAt; }        // at most one
+struct Pending { uint256 amount; uint64 requestedAt; uint64 releaseAt; }  // at most one
 struct PendingSettings { Config next; uint64 applyAt; }     // weaker changes wait
 ```
 
-The implementation holds the shared constants as immutables: the USDC address and the deposit cap.
+The implementation holds the shared constants as immutables: the USDC address, the deposit cap and the minimum cooldown (1 day on mainnet, minutes on testnet so the flow can be tried quickly). The maximum cooldown is 30 days.
 
 The vault's USDC balance is `saved` plus any **unprocessed** USDC (arrived, not yet split). What is owed on an advance lives in the pool, the single source of truth; the vault reads it.
 
@@ -47,15 +47,15 @@ The vault's USDC balance is `saved` plus any **unprocessed** USDC (arrived, not 
 | Function | Who | What it does |
 |---|---|---|
 | `process()` | anyone | Splits USDC that has arrived: repay any advance first (to the pool), then send the spend share to `spendTo`, then add the rest to `saved`. Anything that would push `saved` above the cap goes to spend instead. |
-| `advance(uint256 amt)` | owner | Asks the pool to lend `amt` to `spendTo`. One open advance at a time. Requires `amt * 1.03 <= saved / 2`. |
-| `requestWithdraw(uint256 amt)` | owner | Requires `amt <= saved - owedMax`. Sets `releaseAt = now + cooldown`. |
+| `advance(uint256 amt)` | owner | Asks the pool to lend `amt` to `spendTo`. One open advance at a time. Requires `amt * 1.03 <= (saved - pending withdrawal) / 2`, so an advance can't take collateral already promised to a withdrawal. |
+| `requestWithdraw(uint256 amt)` | owner | Requires `amt <= saved - owedMax`. Sets `releaseAt = now + cooldown`. A second request while one is pending reverts; cancel first. |
 | `cancelWithdraw()` | owner | Clears the pending request. |
-| `executeWithdraw()` | owner | After `releaseAt`, sends the amount **to `safePlace`**. |
+| `executeWithdraw()` | owner | After `releaseAt`, sends the amount **to `safePlace`**. Re-checks `saved - amt >= owedMax`. |
 | `guardianApprove()` | guardian | Sets `releaseAt = now` for an existing request. Nothing else. |
-| `proposeSettings(Config next)` / `applySettings()` | owner | Stronger settings apply at once; weaker ones wait `cooldown`. |
+| `proposeSettings(Config next)` / `applySettings()` | owner | Stronger settings apply at once; weaker ones wait `cooldown`. A new proposal replaces a pending one, so re-proposing the current settings cancels it. |
 | `releaseToPool(uint256 amt)` | **the pool only** | After day 90 of an advance, sends at most what is owed to the pool. |
 
-**Stronger vs weaker settings.** Stronger = longer cooldown, or adding a guardian. Weaker = shorter cooldown, changing `safePlace` or `spendTo`, or removing a guardian. Weaker changes wait, which is what protects a user whose keys were stolen.
+**Stronger vs weaker settings.** Stronger = longer cooldown, or adding a guardian. Weaker = shorter cooldown, changing `safePlace` or `spendTo`, removing or swapping a guardian, or lowering `keepBps`. The guardian can never be `spendTo` or `safePlace`. Weaker changes wait, which is what protects a user whose keys were stolen.
 
 **AdvancePool**
 
@@ -64,7 +64,7 @@ The vault's USDC balance is `saved` plus any **unprocessed** USDC (arrived, not 
 | `fund(amt)` / `withdrawUnlent(amt)` | pool owner | Adds or removes the builder's own unlent capital. Cannot touch any vault. |
 | `setFactory(addr)` | deployer, **once** | Breaks the deploy-order cycle, then is locked. |
 | `lend(spendTo, amt)` | a genuine vault | Checks `factory.isVault(msg.sender)`, reads the vault's `saved`, sends `amt` to `spendTo`, records principal and start time. |
-| `repay(amt)` | a genuine vault | Records repayment: fee first, then principal. The fee goes to `feeSink`. |
+| `repay(amt)` | a genuine vault | Pulls `amt` from the vault (the vault approves it first) and records it: fee first, then principal. The fee goes to `feeSink`. |
 | `settle(address vault)` | anyone | After day 90, calls `vault.releaseToPool(owed)`. |
 | `owedNow(vault)`, `owedMax(vault)` | anyone | Views. `owedMax` = principal + the 3% cap, used to reserve collateral. |
 
@@ -101,6 +101,7 @@ event Withdrawn(address indexed vault, uint256 amount, address to);
 event GuardianApproved(address indexed vault, address indexed guardian);
 event SettingsProposed(address indexed vault, uint64 applyAt);
 event SettingsApplied(address indexed vault);
+event ReleasedToPool(address indexed vault, uint256 amount);
 ```
 
 The app and the Telegram bot are driven entirely by these events. No extra backend state.
