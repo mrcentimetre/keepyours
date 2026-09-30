@@ -25,7 +25,14 @@ function saveWebAuthnKey(k: WebAuthnKey) {
   try {
     localStorage.setItem(
       WEBAUTHN_KEY,
-      JSON.stringify({ ...k, pubX: k.pubX.toString(), pubY: k.pubY.toString(), signMessageCallback: undefined })
+      JSON.stringify({
+        ...k,
+        pubX: k.pubX.toString(),
+        pubY: k.pubY.toString(),
+        signMessageCallback: undefined,
+        // The SDK always returns rpID "", so record the domain ourselves.
+        host: window.location.hostname,
+      })
     );
   } catch {}
 }
@@ -36,8 +43,9 @@ function loadWebAuthnKey(): WebAuthnKey | null {
     if (!raw) return null;
     const k = JSON.parse(raw);
     // Passkeys belong to one domain; a key saved on another one is useless here.
-    if (k.rpID !== window.location.hostname) return null;
-    return { ...k, pubX: BigInt(k.pubX), pubY: BigInt(k.pubY) };
+    if (k.host !== window.location.hostname) return null;
+    const { host: _host, ...key } = k;
+    return { ...key, pubX: BigInt(k.pubX), pubY: BigInt(k.pubY) };
   } catch {
     return null;
   }
