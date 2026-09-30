@@ -216,7 +216,7 @@ export default function HomeScreen() {
   // Spendable money is real: read from the chain, not the mock layer.
   const { balance: walletBalance, refresh: refreshWallet } = useUsdcBalance(address);
   // Savings are real once the vault exists; until then the mock layer fills in.
-  const { payTo, state: vault, refresh: refreshVault } = useVault(address);
+  const { payTo, state: vault, refresh: refreshVault, autoSplitFailed } = useVault(address);
   const [splitting, setSplitting] = useState(false);
 
   useEffect(() => {
@@ -357,13 +357,17 @@ export default function HomeScreen() {
             <span className="min-w-0 flex-1">
               <span className="block text-[14px] font-semibold">${formatUsdc(vault.unprocessed)} arrived</span>
               <span className="block text-[12px] text-muted-foreground">
-                Split it {spendPct}/{keepPct} now
+                {autoSplitFailed ? "Couldn't split it automatically" : `Splitting it ${spendPct}/${keepPct}…`}
               </span>
             </span>
-            <Button size="sm" onClick={splitNow} disabled={splitting}>
-              {splitting && <Loader2 className="animate-spin" />}
-              {splitting ? "Splitting" : "Split"}
-            </Button>
+            {autoSplitFailed ? (
+              <Button size="sm" onClick={splitNow} disabled={splitting}>
+                {splitting && <Loader2 className="animate-spin" />}
+                {splitting ? "Splitting" : "Split now"}
+              </Button>
+            ) : (
+              <Loader2 className="size-5 animate-spin text-primary" aria-label="Splitting" />
+            )}
           </div>
         )}
 
