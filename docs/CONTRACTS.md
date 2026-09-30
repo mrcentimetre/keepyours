@@ -61,11 +61,11 @@ The vault's USDC balance is `saved` plus any **unprocessed** USDC (arrived, not 
 
 | Function | Who | What it does |
 |---|---|---|
-| `fund(amt)` / `withdrawUnlent(amt)` | pool owner | Adds or removes the builder's own unlent capital. Cannot touch any vault. |
+| `fund(amt)` / `withdrawUnlent(amt, to)` | pool owner | Adds or removes the builder's own unlent capital. Cannot touch any vault. |
 | `setFactory(addr)` | deployer, **once** | Breaks the deploy-order cycle, then is locked. |
-| `lend(spendTo, amt)` | a genuine vault | Checks `factory.isVault(msg.sender)`, reads the vault's `saved`, sends `amt` to `spendTo`, records principal and start time. |
+| `lend(spendTo, amt)` | a genuine vault | Checks `factory.isVault(msg.sender)`, re-checks the 50% rule against the vault's `saved`, sends `amt` to `spendTo`, records principal and start time. |
 | `repay(amt)` | a genuine vault | Pulls `amt` from the vault (the vault approves it first) and records it: fee first, then principal. The fee goes to `feeSink`. |
-| `settle(address vault)` | anyone | After day 90, calls `vault.releaseToPool(owed)`. |
+| `settle(address vault)` | anyone | After day 90, calls `vault.releaseToPool(owed)` and books it like a repayment. |
 | `owedNow(vault)`, `owedMax(vault)` | anyone | Views. `owedMax` = principal + the 3% cap, used to reserve collateral. |
 
 ## Advance fee schedule
@@ -78,6 +78,8 @@ The vault's USDC balance is `saved` plus any **unprocessed** USDC (arrived, not 
 | after 90 | anyone can `settle`: the pool takes what is owed from the user's savings |
 
 - The fee is set by the day the repayment lands, worked out at that moment. No compounding, no accrual to track.
+- Each repayment is split as `principal × (1 + fee%)`, so every dollar of principal pays the rate for the day it came back. Partial repayments are never charged twice.
+- The tier length is a deploy-time `period`: 30 days on mainnet, minutes on testnet so the demo can show every tier and `settle`.
 - Capped at 3% in code. There is **no penalty** in the MVP.
 - Repayment comes first from the next deposits, before the split.
 
@@ -95,6 +97,11 @@ event Processed(address indexed vault, uint256 amount, uint256 repaid, uint256 s
 event Advanced(address indexed vault, uint256 amount);
 event AdvanceRepaid(address indexed vault, uint256 principal, uint256 fee);
 event Settled(address indexed vault, uint256 owed);
+// pool bookkeeping
+event Lent(address indexed vault, address to, uint256 amount);
+event Funded(uint256 amount);
+event UnlentWithdrawn(uint256 amount, address to);
+event FactorySet(address factory);
 event WithdrawRequested(address indexed vault, uint256 amount, uint64 releaseAt);
 event WithdrawCancelled(address indexed vault, uint256 amount);
 event Withdrawn(address indexed vault, uint256 amount, address to);
@@ -136,7 +143,7 @@ The app and the Telegram bot are driven entirely by these events. No extra backe
 
 ## Fees and money flow
 
-- Advance fee: the schedule above, in `advanceFeeBps` tiers set at deploy, capped at 300.
+- Advance fee: the schedule above, as `midFeeBps` (150) and `lateFeeBps` (300) set at deploy; the constructor refuses anything above 300.
 - Yield share (later): 15% of interest earned, taken when savings are withdrawn.
 - Fees go to `feeSink`. Contract code never takes from `saved` except what is owed.
 
