@@ -7,7 +7,7 @@ import {
   ArrowUpFromLine,
   Bell,
   ChevronRight,
-  Copy,
+  Send,
   Lock,
   Plus,
   QrCode as QrIcon,
@@ -16,11 +16,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
+import { useUsdcBalance } from "@/hooks/use-usdc-balance";
 import { getVaultSettings, DEFAULT_SETTINGS, type VaultSettings } from "@/lib/vault-settings";
 import {
   getPayments,
   getKeptBalance,
-  getSpentTotal,
   addSimulatedPayment,
   type Payment,
 } from "@/lib/mock-activity";
@@ -209,6 +209,8 @@ export default function HomeScreen() {
   const [profileOpen, setProfileOpen] = useState(false);
   const name = useProfileName();
   const [alertsOpen, setAlertsOpen] = useState(false);
+  // Spendable money is real: read from the chain, not the mock layer.
+  const { balance: walletBalance } = useUsdcBalance(address);
 
   function refresh() {
     setPayments(getPayments());
@@ -236,17 +238,7 @@ export default function HomeScreen() {
   const keepPct = Math.round(settings.keepBps / 100);
   const spendPct = 100 - keepPct;
   const kept = getKeptBalance();
-  const spent = getSpentTotal();
-
-  async function copyAddress() {
-    if (!address) return;
-    try {
-      await navigator.clipboard.writeText(address);
-      toast.success("Address copied");
-    } catch {
-      toast.error("Couldn't copy — open Get paid and copy it there");
-    }
-  }
+  const spendable = walletBalance ?? 0;
 
   function simulatePayment() {
     const p = addSimulatedPayment(100, settings.keepBps);
@@ -323,7 +315,7 @@ export default function HomeScreen() {
           <HeroAction primary onClick={() => setGetPaidOpen(true)} icon={<QrIcon className="size-6" />} label="Get paid" />
           <HeroAction href="/app/withdraw" icon={<ArrowUpFromLine className="size-6" />} label="Withdraw" />
           <HeroAction href="/app/advance" icon={<Zap className="size-6" />} label="Advance" />
-          <HeroAction onClick={copyAddress} icon={<Copy className="size-6" />} label="Copy" />
+          <HeroAction href="/app/send" icon={<Send className="size-6" />} label="Send" />
         </div>
       </section>
 
@@ -358,7 +350,7 @@ export default function HomeScreen() {
 
         {/* ── Split ─────────────────────────────────────────── */}
         <div className="grid grid-cols-2 gap-3">
-          <SplitTile label="To spend" value={spent} pct={spendPct} tone="spend" />
+          <SplitTile label="To spend" value={spendable} pct={spendPct} tone="spend" />
           <SplitTile label="Kept" value={kept} pct={keepPct} tone="keep" />
         </div>
 
