@@ -1,9 +1,9 @@
 // The only place the app talks to the Keep Yours contracts. Everything the
 // screens show about savings is read from here; the phone only caches it.
 
-import { encodeFunctionData, formatUnits, parseAbi, zeroAddress, type Address, type Hex } from "viem";
+import { encodeFunctionData, erc20Abi, formatUnits, parseAbi, parseUnits, zeroAddress, type Address, type Hex } from "viem";
 import { loginPasskeyWallet, publicClient } from "./zerodev";
-import { USDC_ADDRESS } from "./usdc";
+import { USDC_ADDRESS, usdcTransferData } from "./usdc";
 import { saveVaultSettings } from "./vault-settings";
 
 export const FACTORY = process.env.NEXT_PUBLIC_FACTORY as Address | undefined;
@@ -40,6 +40,7 @@ export const poolAbi = parseAbi([
   "function owedMax(address vault) view returns (uint256)",
   "function loans(address vault) view returns (uint128 principal, uint64 start)",
   "function feeBpsNow(address vault) view returns (uint16)",
+  "function period() view returns (uint32)",
 ]);
 
 const usd = (raw: bigint) => Number(formatUnits(raw, 6));
@@ -54,7 +55,11 @@ export type VaultState = {
   withdrawable: number;
   unprocessed: number;
   pending: { amount: number; requestedAt: number; releaseAt: number } | null; // ms timestamps
-  advance: { principal: number; owedNow: number; startedAt: number } | null;
+  advance: { principal: number; owedNow: number; startedAt: number; feeBps: number } | null;
+  /** Length of one fee tier in seconds (30 days on mainnet, minutes on testnet). */
+  feePeriodSeconds: number;
+  /** USDC the pool can lend right now. */
+  poolLiquidity: number;
 };
 
 export async function predictVault(owner: Address): Promise<Address> {
@@ -70,7 +75,7 @@ export async function vaultOf(owner: Address): Promise<Address | null> {
 export async function readVault(vault: Address): Promise<VaultState> {
   const c = { address: vault, abi: vaultAbi } as const;
   const p = { address: POOL!, abi: poolAbi } as const;
-  const [config, saved, withdrawable, unprocessed, pending, loan, owedNow] = await publicClient.multicall({
+  const [config, saved, withdrawable, unprocessed, pending, loan, owedNow, feeBps, period, liquidity] = await publicClient.multicall({
     allowFailure: false,
     contracts: [
       { ...c, functionName: "config" },
@@ -80,6 +85,9 @@ export async function readVault(vault: Address): Promise<VaultState> {
       { ...c, functionName: "pendingWithdraw" },
       { ...p, functionName: "loans", args: [vault] },
       { ...p, functionName: "owedNow", args: [vault] },
+      { ...p, functionName: "feeBpsNow", args: [vault] },
+      { ...p, functionName: "period" },
+      { address: USDC_ADDRESS!, abi: erc20Abi, functionName: "balanceOf", args: [POOL!] },
     ],
   });
   const [principal, start] = loan;
@@ -96,7 +104,12 @@ export async function readVault(vault: Address): Promise<VaultState> {
       pending.amount > BigInt(0)
         ? { amount: usd(pending.amount), requestedAt: Number(pending.requestedAt) * 1000, releaseAt: Number(pending.releaseAt) * 1000 }
         : null,
-    advance: principal > BigInt(0) ? { principal: usd(principal), owedNow: usd(owedNow), startedAt: Number(start) * 1000 } : null,
+    advance:
+      principal > BigInt(0)
+        ? { principal: usd(principal), owedNow: usd(owedNow), startedAt: Number(start) * 1000, feeBps: Number(feeBps) }
+        : null,
+    feePeriodSeconds: Number(period),
+    poolLiquidity: usd(liquidity),
   };
   // Screens not yet on-chain still read settings from the phone; keep them in step.
   saveVaultSettings({ keepBps: state.keepBps, cooldownSeconds: state.cooldownSeconds });
@@ -112,13 +125,22 @@ export type Call = { to: Address; data: Hex };
  * signer only exists for this call. Refuses if the passkey opens a different
  * wallet than the one this phone signed in with.
  */
-export async function sendWithPasskey(expected: Address | null, call: Call): Promise<Hex> {
+export async function sendWithPasskey(expected: Address | null, call: Call | Call[]): Promise<Hex> {
   const wallet = await loginPasskeyWallet("Keep Yours");
   if (expected && wallet.address.toLowerCase() !== expected.toLowerCase()) {
     throw new Error("DIFFERENT_WALLET");
   }
+  const account = wallet.kernelClient.account!;
+  if (Array.isArray(call)) {
+    // Several calls, one user operation: all or nothing.
+    return wallet.kernelClient.sendTransaction({
+      account,
+      chain: wallet.kernelClient.chain,
+      calls: call.map((c) => ({ to: c.to, data: c.data, value: BigInt(0) })),
+    });
+  }
   return wallet.kernelClient.sendTransaction({
-    account: wallet.kernelClient.account!,
+    account,
     chain: wallet.kernelClient.chain,
     to: call.to,
     data: call.data,
@@ -140,6 +162,43 @@ export function createVaultCall(owner: Address, keepBps: number, cooldownSeconds
 
 export function processCall(vault: Address): Call {
   return { to: vault, data: encodeFunctionData({ abi: vaultAbi, functionName: "process" }) };
+}
+
+export function requestWithdrawCall(vault: Address, amount: string): Call {
+  return {
+    to: vault,
+    data: encodeFunctionData({ abi: vaultAbi, functionName: "requestWithdraw", args: [parseUnits(amount, 6)] }),
+  };
+}
+
+export function cancelWithdrawCall(vault: Address): Call {
+  return { to: vault, data: encodeFunctionData({ abi: vaultAbi, functionName: "cancelWithdraw" }) };
+}
+
+export function executeWithdrawCall(vault: Address): Call {
+  return { to: vault, data: encodeFunctionData({ abi: vaultAbi, functionName: "executeWithdraw" }) };
+}
+
+export function advanceCall(vault: Address, amount: string): Call {
+  return {
+    to: vault,
+    data: encodeFunctionData({ abi: vaultAbi, functionName: "advance", args: [parseUnits(amount, 6)] }),
+  };
+}
+
+/** Repay early from the wallet: pay the vault what is owed, then process(), which repays first. */
+export function repayNowCalls(vault: Address, owed: number): Call[] {
+  return [
+    { to: USDC_ADDRESS!, data: usdcTransferData(vault, owed.toFixed(6)) },
+    processCall(vault),
+  ];
+}
+
+/** The contract's rule: amount x 1.03 <= half of the savings not promised to a withdrawal. */
+export function maxAdvance(state: VaultState): number {
+  const free = state.saved - (state.pending?.amount ?? 0);
+  const byRule = Math.floor((free / 2.06) * 100) / 100;
+  return Math.max(0, Math.min(byRule, Math.floor(state.poolLiquidity * 100) / 100));
 }
 
 /** Turns SDK, bundler and WebAuthn errors into something a person can act on. */
