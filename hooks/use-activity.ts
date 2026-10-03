@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Address } from "viem";
 import { readActivity, type ActivityItem } from "@/lib/activity";
+import { readCache, writeCache } from "@/lib/cache";
+import { haptic } from "@/lib/haptics";
+import { toast } from "sonner";
 
 const POLL_MS = 20_000;
 const SEEN_KEY = "ky_activity_seen_at"; // newest item the person has looked at
@@ -41,7 +44,12 @@ async function notifyIncoming(item: ActivityItem) {
 
 /** On-chain activity, newest first, plus how many items are unread. */
 export function useActivity(owner: string | null, vault: Address | null) {
-  const [items, setItems] = useState<ActivityItem[] | null>(null);
+  const key = `activity:${vault}`;
+  const [items, setItems] = useState<ActivityItem[] | null>(() => (vault ? readCache<ActivityItem[]>(key) : null));
+
+  useEffect(() => {
+    if (vault) setItems((v) => v ?? readCache<ActivityItem[]>(key));
+  }, [vault, key]);
   const [seenAt, setSeenAt] = useState(0);
   const first = useRef(true);
 
@@ -52,20 +60,30 @@ export function useActivity(owner: string | null, vault: Address | null) {
     try {
       const next = await readActivity(owner as Address, vault);
       setItems(next);
+      writeCache(key, next);
       const notifiedAt = readNum(NOTIFIED_KEY);
       // Never notify for history on the first load after install.
       if (first.current && notifiedAt === 0) {
         writeNum(NOTIFIED_KEY, next[0]?.at ?? Date.now());
       } else {
         const fresh = next.filter((i) => i.at > notifiedAt && INCOMING.has(i.kind));
-        for (const i of fresh) await notifyIncoming(i);
+        for (const i of fresh) {
+          // In the app: a toast, plus a haptic where the phone allows one
+          // without a tap (Android always; iPhone usually not). Outside the
+          // app, the phone notification is what buzzes.
+          if (document.visibilityState === "visible") {
+            haptic();
+            toast.success(`+$${i.amount.toFixed(2)} received`, { description: i.detail });
+          }
+          await notifyIncoming(i);
+        }
         if (next[0]) writeNum(NOTIFIED_KEY, Math.max(notifiedAt, next[0].at));
       }
       first.current = false;
     } catch {
       // Keep the last list; the next poll tries again.
     }
-  }, [owner, vault]);
+  }, [owner, vault, key]);
 
   useEffect(() => {
     refresh();
