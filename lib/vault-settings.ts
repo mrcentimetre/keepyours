@@ -4,6 +4,8 @@
 // file is what gets replaced then, nothing else should read localStorage
 // for vault state directly.
 
+import { chain } from "./zerodev";
+
 const SETTINGS_KEY = "ky_vault_settings";
 
 export type VaultSettings = {
@@ -16,12 +18,20 @@ export const DEFAULT_SETTINGS: VaultSettings = {
   cooldownSeconds: 72 * 60 * 60, // 72h
 };
 
-export const COOLDOWN_PRESETS = [
+/** Testnet only: the Sepolia contracts accept a waiting period this short. */
+export const DEMO_COOLDOWN_SECONDS = 5 * 60;
+const IS_TESTNET = chain.testnet === true; // the chain the app actually talks to
+
+// The 5-minute choice exists so a demo can show a withdrawal finishing.
+// It must never reach mainnet (the contract there refuses under 1 day) or
+// the main branch; see the testnet-only note in the project memory.
+export const COOLDOWN_PRESETS: readonly { label: string; seconds: number }[] = [
+  ...(IS_TESTNET ? [{ label: "5 minutes", seconds: DEMO_COOLDOWN_SECONDS }] : []),
   { label: "72 hours", seconds: 72 * 60 * 60 },
   { label: "7 days", seconds: 7 * 24 * 60 * 60 },
   { label: "14 days", seconds: 14 * 24 * 60 * 60 },
   { label: "30 days", seconds: 30 * 24 * 60 * 60 },
-] as const;
+];
 
 export function getVaultSettings(): VaultSettings | null {
   try {

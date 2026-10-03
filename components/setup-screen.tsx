@@ -7,6 +7,7 @@ import { CircleCheck, Loader2 } from "lucide-react";
 import {
   DEFAULT_SETTINGS,
   COOLDOWN_PRESETS,
+  DEMO_COOLDOWN_SECONDS,
   saveVaultSettings,
   type VaultSettings,
 } from "@/lib/vault-settings";
@@ -125,7 +126,11 @@ export default function SetupScreen() {
                   <span>
                     <span className="block text-[15px] font-semibold">{preset.label}</span>
                     <span className="block text-[12px] text-muted-foreground">
-                      {preset.seconds === DEFAULT_SETTINGS.cooldownSeconds ? "Default" : "Longer wait"}
+                      {preset.seconds === DEMO_COOLDOWN_SECONDS
+                        ? "Testnet demo"
+                        : preset.seconds === DEFAULT_SETTINGS.cooldownSeconds
+                          ? "Default"
+                          : "Longer wait"}
                     </span>
                   </span>
                   {active && <CircleCheck className="size-5 text-primary" />}

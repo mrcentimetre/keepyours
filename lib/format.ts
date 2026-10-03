@@ -36,6 +36,10 @@ export function formatCountdown(msRemaining: number): string {
 }
 
 export function formatCooldown(seconds: number): string {
+  if (seconds < 3600) {
+    const minutes = Math.round(seconds / 60);
+    return minutes === 1 ? "1 minute" : `${minutes} minutes`;
+  }
   const hours = Math.round(seconds / 3600);
   if (hours < 24) return `${hours} hours`;
   if (hours % 24 !== 0) return `${hours} hours`;
@@ -45,6 +49,7 @@ export function formatCooldown(seconds: number): string {
 
 /** Adjective form, for "a 3-day waiting period" rather than "a 3 days …". */
 export function formatCooldownAdj(seconds: number): string {
+  if (seconds < 3600) return `${Math.round(seconds / 60)}-minute`;
   const hours = Math.round(seconds / 3600);
   return hours % 24 === 0 ? `${hours / 24}-day` : `${hours}-hour`;
 }
