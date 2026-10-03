@@ -71,6 +71,8 @@ const ev = {
   repaid: parseAbiItem("event AdvanceRepaid(address indexed vault, uint256 principal, uint256 fee)"),
   settled: parseAbiItem("event Settled(address indexed vault, uint256 owed)"),
   transfer: parseAbiItem("event Transfer(address indexed from, address indexed to, uint256 value)"),
+  settingsProposed: parseAbiItem("event SettingsProposed(address indexed vault, uint64 applyAt)"),
+  settingsApplied: parseAbiItem("event SettingsApplied(address indexed vault)"),
 };
 const vaultAbi = parseAbi(["function process()", "function unprocessed() view returns (uint256)"]);
 const poolAbi = parseAbi([
@@ -151,6 +153,10 @@ function text(kind, a) {
       return { title: `Withdrawal of ${$(a.amount)} cancelled`, body: "Your savings stay put." };
     case "withdrawn":
       return { title: `${$(a.amount)} withdrawn`, body: "It's in your wallet now." };
+    case "settings-requested":
+      return { title: "Settings change requested", body: "It applies after your waiting period. If this wasn't you, open Keep Yours and cancel it." };
+    case "settings-applied":
+      return { title: "Vault settings updated", body: "Your new split and waiting period are in force." };
   }
 }
 
@@ -160,7 +166,7 @@ async function newEvents(from, to) {
   if (!watched.length) return [];
   const owners = watched.map((v) => state.vaults[v]);
   const range = { fromBlock: from, toBlock: to };
-  const [processed, advanced, requested, cancelled, withdrawn, repaid, settled, into, out] = await Promise.all([
+  const [processed, advanced, requested, cancelled, withdrawn, repaid, settled, into, out, proposedS, appliedS] = await Promise.all([
     pub.getLogs({ ...range, address: watched, event: ev.processed }),
     pub.getLogs({ ...range, address: watched, event: ev.advanced }),
     pub.getLogs({ ...range, address: watched, event: ev.requested }),
@@ -170,6 +176,8 @@ async function newEvents(from, to) {
     pub.getLogs({ ...range, address: POOL, event: ev.settled, args: { vault: watched } }),
     pub.getLogs({ ...range, address: USDC, event: ev.transfer, args: { to: owners } }),
     pub.getLogs({ ...range, address: USDC, event: ev.transfer, args: { from: owners } }),
+    pub.getLogs({ ...range, address: watched, event: ev.settingsProposed }),
+    pub.getLogs({ ...range, address: watched, event: ev.settingsApplied }),
   ]);
   const ownerToVault = Object.fromEntries(watched.map((v) => [state.vaults[v], v]));
   const own = new Set([...watched, POOL.toLowerCase()]);
@@ -186,6 +194,8 @@ async function newEvents(from, to) {
   for (const l of repaid)
     items.push({ ...at(l), vault: vaultOf(l), kind: "repaid", a: { amount: usd(l.args.principal + l.args.fee), fee: usd(l.args.fee) } });
   for (const l of settled) items.push({ ...at(l), vault: vaultOf(l), kind: "settled", a: { amount: usd(l.args.owed) } });
+  for (const l of proposedS) items.push({ ...at(l), vault: vaultOf(l), kind: "settings-requested", a: {} });
+  for (const l of appliedS) items.push({ ...at(l), vault: vaultOf(l), kind: "settings-applied", a: {} });
   // Wallet transfers the vault or pool already explain would show twice.
   for (const l of into) {
     if (own.has(l.args.from.toLowerCase())) continue;
