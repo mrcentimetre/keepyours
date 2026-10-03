@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Analytics from "@/components/analytics";
 import { Toaster } from "sonner";
 import RegisterSW from "@/components/register-sw";
 import AppShell from "@/components/app-shell";
@@ -43,6 +44,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <RegisterSW />
       <NoZoom />
       <ThemeSync />
+      <Analytics />
       <AppShell>{children}</AppShell>
       {/* Toasts as a small pill that drops in under the notch / Dynamic
           Island — not a full-width box drawn over the clock. Unstyled, so
