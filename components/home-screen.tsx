@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -235,6 +236,7 @@ export default function HomeScreen() {
     try {
       await sendWithPasskey(address as Address, processCall(vault.address));
       toast.success("Split done");
+      track("payment_split", { by: "manual" });
       await Promise.all([refreshVault(), refreshWallet()]);
     } catch (e) {
       toast.error(plainTxError(e));

@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import { useEffect, useState } from "react";
 import type { Address } from "viem";
 import { ArrowDown, Loader2, Lock, Timer } from "lucide-react";
@@ -87,6 +88,7 @@ export default function WithdrawScreen() {
       return true;
     } catch (e) {
       toast.error(plainTxError(e));
+      track("tx_failed", { action: "withdraw", reason: plainTxError(e) });
       setSlideKey((k) => k + 1); // let them slide again
       return false;
     } finally {
@@ -137,6 +139,7 @@ export default function WithdrawScreen() {
         setAmount("");
         setReviewOpen(false);
         toast.success("Waiting period started");
+        track("withdraw_requested");
       }
       return;
     }
@@ -153,7 +156,10 @@ export default function WithdrawScreen() {
 
   async function cancel() {
     if (vault) {
-      if (await run(cancelWithdrawCall)) toast.success("Withdrawal cancelled. Your savings stay put.");
+      if (await run(cancelWithdrawCall)) {
+        toast.success("Withdrawal cancelled. Your savings stay put.");
+        track("withdraw_cancelled");
+      }
       return;
     }
     cancelWithdrawal();
@@ -164,7 +170,10 @@ export default function WithdrawScreen() {
   async function send() {
     const amt = pending?.amountUsdc ?? 0;
     if (vault) {
-      if (await run(executeWithdrawCall)) toast.success(`Sent $${formatUsdc(amt)} to your wallet`);
+      if (await run(executeWithdrawCall)) {
+        toast.success(`Sent $${formatUsdc(amt)} to your wallet`);
+        track("withdraw_completed");
+      }
       return;
     }
     executeWithdrawal();

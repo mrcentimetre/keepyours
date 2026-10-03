@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import { useCallback, useEffect, useState } from "react";
 import type { Address } from "viem";
 import { isVaultConfigured, predictVault, readVault, vaultOf, type VaultState } from "@/lib/vault";
@@ -70,9 +71,11 @@ export function useVault(owner: string | null) {
     setSplitting(true);
     autoSplit(vault)
       .then(() => {
+        track("payment_split", { by: "auto" });
         if (!cancelled) refresh();
       })
       .catch(() => {
+        track("tx_failed", { action: "auto_split" });
         if (!cancelled) setAutoSplitFailed(true);
       })
       // Always clear, even if this effect was superseded, or the spinner could stick.

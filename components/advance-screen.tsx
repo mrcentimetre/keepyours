@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import { useEffect, useState } from "react";
 import type { Address } from "viem";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
@@ -122,6 +123,7 @@ export default function AdvanceScreen() {
       return true;
     } catch (e) {
       toast.error(plainTxError(e));
+      track("tx_failed", { action: "advance", reason: plainTxError(e) });
       setSlideKey((k) => k + 1);
       return false;
     } finally {
@@ -170,6 +172,7 @@ export default function AdvanceScreen() {
         setAmount(0);
         setReviewOpen(false);
         toast.success(`$${formatUsdc(value)} sent to your wallet`);
+        track("advance_taken");
       }
       return;
     }
@@ -184,7 +187,10 @@ export default function AdvanceScreen() {
 
   async function repay() {
     if (vault?.advance) {
-      if (await run(repayNowCalls(vault.address, vault.advance.owedNow))) toast.success("Advance repaid");
+      if (await run(repayNowCalls(vault.address, vault.advance.owedNow))) {
+        toast.success("Advance repaid");
+        track("advance_repaid");
+      }
       return;
     }
     repayAdvance();

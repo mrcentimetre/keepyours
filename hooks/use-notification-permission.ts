@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import { useCallback, useEffect, useState } from "react";
 
 export type NotifyPermission = "default" | "granted" | "denied" | "unsupported";
@@ -33,6 +34,7 @@ export function useNotificationPermission() {
     if (Notification.permission !== "default") return Notification.permission as NotifyPermission;
     const result = (await Notification.requestPermission()) as NotifyPermission;
     setPermission(result);
+    track("notifications_answered", { allowed: result === "granted" });
     if (result === "granted") {
       try {
         const reg = await navigator.serviceWorker?.getRegistration();

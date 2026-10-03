@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Address } from "viem";
@@ -46,11 +47,13 @@ export default function SetupScreen() {
       // Signed in with an existing passkey on a new phone: the vault is already there.
       if (!(await vaultOf(owner))) {
         await sendWithPasskey(owner, createVaultCall(owner, keepBps, cooldownSeconds));
+        track("vault_created", { demo_waiting_period: cooldownSeconds < 3600 });
       }
       saveVaultSettings(settings);
       router.push("/app/home");
     } catch (e) {
       setError(plainTxError(e));
+      track("tx_failed", { action: "create_vault", reason: plainTxError(e) });
       setBusy(false);
     }
   }
