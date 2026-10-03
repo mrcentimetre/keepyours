@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import type { Address } from "viem";
 import {
   createPasskeyWallet,
-  loginPasskeyWallet,
+  unlockPasskeyWallet,
   forgetWebAuthnKey,
   isZeroDevConfigured,
   type PasskeyWallet,
@@ -105,7 +105,7 @@ export function usePasskeyWallet() {
   }, []);
 
   const create = useCallback(() => run(() => createPasskeyWallet(PASSKEY_NAME), true), [run]);
-  const unlock = useCallback(() => run(() => loginPasskeyWallet(PASSKEY_NAME), false), [run]);
+  const unlock = useCallback(() => run(() => unlockPasskeyWallet(PASSKEY_NAME), false), [run]);
 
   return {
     status,

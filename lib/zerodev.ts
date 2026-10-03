@@ -51,6 +51,42 @@ function loadWebAuthnKey(): WebAuthnKey | null {
   }
 }
 
+function base64UrlToBytes(b64: string): Uint8Array<ArrayBuffer> {
+  const padded = b64.replace(/-/g, "+").replace(/_/g, "/").padEnd(b64.length + ((4 - (b64.length % 4)) % 4), "=");
+  const raw = atob(padded);
+  const out = new Uint8Array(new ArrayBuffer(raw.length));
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+/**
+ * Face ID / fingerprint against this wallet's own passkey: proves a person is
+ * opening the app. Nothing is signed for the chain; it only gates the screen,
+ * so the challenge can be local. Throws if cancelled or it's a different passkey.
+ */
+async function confirmPresence(key: WebAuthnKey) {
+  await navigator.credentials.get({
+    publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rpId: window.location.hostname,
+      allowCredentials: [{ id: base64UrlToBytes(key.authenticatorId), type: "public-key" }],
+      userVerification: "required",
+      timeout: 60_000,
+    },
+  });
+}
+
+/**
+ * Unlock on app open: always one Face ID. With the public key remembered
+ * that's a presence check on this passkey; without it, the full login
+ * (which is itself the one prompt).
+ */
+export async function unlockPasskeyWallet(passkeyName: string): Promise<PasskeyWallet> {
+  const cached = loadWebAuthnKey();
+  if (cached) await confirmPresence(cached);
+  return buildWallet(WebAuthnMode.Login, passkeyName);
+}
+
 /** Sign out forgets it too, so the next unlock does the full login again. */
 export function forgetWebAuthnKey() {
   try {
