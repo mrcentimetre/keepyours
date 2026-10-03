@@ -328,7 +328,7 @@ export default function HomeScreen() {
                 <p className="truncate text-[15px] font-semibold">{name}</p>
               ) : (
                 <p className="truncate font-mono text-[14px] font-semibold">
-                  {address ? shorten(address) : "Keep Yours"}
+                  {payTo ? shorten(payTo) : "Keep Yours"}
                 </p>
               )}
             </div>

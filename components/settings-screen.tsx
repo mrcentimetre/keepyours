@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from "@/lib/theme";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import { useProfileName } from "@/hooks/use-profile-name";
+import { useVault } from "@/hooks/use-vault";
+import { isVaultConfigured } from "@/lib/vault";
 import { getVaultSettings, DEFAULT_SETTINGS, type VaultSettings } from "@/lib/vault-settings";
 import { formatCooldown, shorten } from "@/lib/format";
 import { Screen, ScreenHeader, SectionLabel, WalletAvatar } from "./app/screen";
@@ -62,6 +64,12 @@ export default function SettingsScreen() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [theme, setTheme] = useState<ThemeChoice>("dark");
   const name = useProfileName();
+  // Settings and the shown address come from the vault once it exists.
+  const { payTo, state: vault } = useVault(address);
+
+  useEffect(() => {
+    if (vault) setSettings({ keepBps: vault.keepBps, cooldownSeconds: vault.cooldownSeconds });
+  }, [vault]);
 
   useEffect(() => {
     setMounted(true);
@@ -88,7 +96,7 @@ export default function SettingsScreen() {
           <div className="min-w-0 flex-1">
             <p className="truncate text-[15px] font-semibold">{name || "Your wallet"}</p>
             <p className="truncate font-mono text-[13px] text-muted-foreground">
-              {address ? shorten(address) : "Not connected"}
+              {(isVaultConfigured() ? payTo : address) ? shorten((isVaultConfigured() ? payTo : address)!) : "…"}
             </p>
             {!name && <p className="mt-0.5 text-[12px] font-semibold text-accent">Add your name</p>}
           </div>
