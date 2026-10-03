@@ -202,7 +202,11 @@ export default function AdvanceScreen() {
   // ── Open advance ────────────────────────────────────────────
   if (advance) {
     // "Days" scale with the tier length, so testnet shows the same 90-day story in minutes.
-    const day = vault ? Math.max(0, Math.floor(((now - advance.takenAt) / tierMs) * 30)) : daysElapsed(advance.takenAt, now);
+    // Capped at 90: past that the advance is simply due, however long ago it was.
+    const day = Math.min(
+      90,
+      vault ? Math.max(0, Math.floor(((now - advance.takenAt) / tierMs) * 30)) : daysElapsed(advance.takenAt, now)
+    );
     const overdue = vault ? now - advance.takenAt > 3 * tierMs : isOverdue(advance.takenAt, now);
     const feeBps = vault?.advance ? vault.advance.feeBps : getFeeBps(advance.takenAt, now);
     const feeOwed = vault?.advance ? Math.max(0, vault.advance.owedNow - vault.advance.principal) : getFeeOwed(advance, now);
@@ -221,7 +225,9 @@ export default function AdvanceScreen() {
           </div>
           <Money value={advance.amountUsdc} className="mt-2 block text-[40px] leading-none font-semibold" centsClassName="text-[26px]" />
           <p className="mt-2 text-[13px] text-muted-foreground">
-            Taken {day === 0 ? "today" : `${day} day${day === 1 ? "" : "s"} ago`} · day {day + 1} of 90
+            {overdue
+              ? "Past day 90 · can now be settled from your savings"
+              : `Taken ${day === 0 ? "today" : `${day} day${day === 1 ? "" : "s"} ago`} · day ${day + 1} of 90`}
           </p>
           <div className="mt-6">
             <FeeTimeline day={day} />
