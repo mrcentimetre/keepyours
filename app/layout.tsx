@@ -28,7 +28,7 @@ const SITE = "https://keepyours.xyz";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
-  title: "Keep Yours — get paid, keep yours",
+  title: "Keep Yours - get paid, keep yours",
   description:
     "A savings layer for people paid in crypto. Every USDC payment splits into spend and save. Savings sit behind a cooldown so they can't be traded away, and you can borrow against them before payday.",
   icons: {
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     apple: "/apple-icon.png",
   },
   openGraph: {
-    title: "Keep Yours — get paid, keep yours",
+    title: "Keep Yours - get paid, keep yours",
     description:
       "Savings for people paid in crypto. Split every payment, lock what you keep, borrow against it before payday. On Arbitrum.",
     url: SITE,
