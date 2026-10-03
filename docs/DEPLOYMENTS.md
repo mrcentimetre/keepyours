@@ -28,3 +28,7 @@ forge script script/Deploy.s.sol --rpc-url arbitrum_sepolia --broadcast --verify
 ```
 
 Copy the printed addresses into `.env.local` (`NEXT_PUBLIC_FACTORY`, `NEXT_PUBLIC_POOL`, `NEXT_PUBLIC_USDC`) and into Vercel.
+
+## Keeper (VPS)
+
+Runs on the Hetzner VPS as the `keepyours-keeper` systemd service (`/opt/keepyours/keeper`, user `keeper`). Splits new payments, settles advances past day 90, and sends web push for every vault event. Gas key `0x1886d3c562Dc7d43D7BfDfce46FdA7B4233c3262` (testnet ETH only; it cannot move savings). Health: `http://89.167.36.214:8787/health`. Logs: `journalctl -u keepyours-keeper -f`. Setup: `keeper/README.md`.
