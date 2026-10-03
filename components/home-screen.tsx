@@ -6,7 +6,6 @@ import {
   ArrowDownLeft,
   ArrowUpFromLine,
   Bell,
-  ChevronRight,
   Send,
   Loader2,
   Lock,
@@ -22,6 +21,8 @@ import { useVault } from "@/hooks/use-vault";
 import { useActivity } from "@/hooks/use-activity";
 import { useNotificationPermission } from "@/hooks/use-notification-permission";
 import ActivityList from "./activity-list";
+import InProgressCard, { humanDuration } from "./app/in-progress-card";
+import { AdvanceIcon, CooldownIcon, SplitIcon } from "./waitlist/feature-icons";
 import { isVaultConfigured, plainTxError, processCall, sendWithPasskey } from "@/lib/vault";
 import type { Address } from "viem";
 import { getVaultSettings, DEFAULT_SETTINGS, type VaultSettings } from "@/lib/vault-settings";
@@ -33,7 +34,7 @@ import {
 } from "@/lib/mock-activity";
 import { getPendingWithdrawal, type PendingWithdrawal } from "@/lib/mock-withdrawal";
 import { getOpenAdvance, type Advance } from "@/lib/mock-advance";
-import { formatUsdc, formatCooldownAdj, formatCountdown, shorten, timeAgo } from "@/lib/format";
+import { formatUsdc, formatCooldownAdj, shorten, timeAgo } from "@/lib/format";
 import { Contour } from "./app/contour";
 import { cn } from "@/lib/utils";
 import { Money, SectionLabel, WalletAvatar } from "./app/screen";
@@ -88,44 +89,6 @@ function HeroAction({
 /** Something in progress that deserves the top of the screen — a
  * withdrawal counting down, an advance open. Amber means waiting
  * (CLAUDE.md's brand rule), so the withdrawal tile is amber. */
-function StatusTile({
-  href,
-  tone,
-  icon,
-  title,
-  detail,
-}: {
-  href: string;
-  tone: "warning" | "primary";
-  icon: React.ReactNode;
-  title: string;
-  detail: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className={cn(
-        "flex items-center gap-3 rounded-[20px] p-4 ring-1 transition-transform active:scale-[0.99]",
-        tone === "warning" ? "bg-warning/10 ring-warning/25" : "bg-primary/10 ring-primary/25"
-      )}
-    >
-      <span
-        className={cn(
-          "flex size-10 shrink-0 items-center justify-center rounded-full",
-          tone === "warning" ? "bg-warning/15 text-warning" : "bg-primary/15 text-primary"
-        )}
-      >
-        {icon}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block text-[14px] font-semibold">{title}</span>
-        <span className="block font-mono text-[12px] text-muted-foreground tabular-nums">{detail}</span>
-      </span>
-      <ChevronRight className="size-5 text-muted-foreground" aria-hidden="true" />
-    </Link>
-  );
-}
-
 function SplitTile({
   label,
   value,
@@ -369,12 +332,13 @@ export default function HomeScreen() {
       <div className="flex flex-col gap-6 px-5 pt-6">
         {/* ── Arrived, not split yet ────────────────────────── */}
         {vault && vault.unprocessed > 0 && (
-          <div className="flex items-center gap-3 rounded-[20px] bg-primary/10 p-4 ring-1 ring-primary/25">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary">
-              <ArrowDownLeft className="size-5" />
-            </span>
+          <div className="flex items-center gap-3.5 rounded-[22px] bg-card p-4 shadow-sm ring-1 ring-hairline">
+            <SplitIcon className="size-12 shrink-0" />
             <span className="min-w-0 flex-1">
-              <span className="block text-[14px] font-semibold">${formatUsdc(vault.unprocessed)} arrived</span>
+              <span className="block text-[13px] text-muted-foreground">Payment arrived</span>
+              <span className="block font-mono text-[22px] leading-tight font-semibold tracking-[-0.02em] tabular-nums">
+                ${formatUsdc(vault.unprocessed)}
+              </span>
               <span className="block text-[12px] text-muted-foreground">
                 {autoSplitFailed ? "Couldn't split it automatically" : `Splitting it ${spendPct}/${keepPct}…`}
               </span>
@@ -393,28 +357,49 @@ export default function HomeScreen() {
         {/* ── In progress ───────────────────────────────────── */}
         {(pending || advance) && (
           <div className="flex flex-col gap-3">
-            {pending && (
-              <StatusTile
-                href="/app/withdraw"
-                tone="warning"
-                icon={<Timer className="size-5" />}
-                title="Withdrawal waiting"
-                detail={
-                  now >= pending.releaseAt
-                    ? `$${formatUsdc(pending.amountUsdc)} · ready to send`
-                    : `$${formatUsdc(pending.amountUsdc)} · ${formatCountdown(pending.releaseAt - now)} left`
-                }
-              />
-            )}
-            {advance && (
-              <StatusTile
-                href="/app/advance"
-                tone="primary"
-                icon={<Zap className="size-5" />}
-                title="Advance open"
-                detail={`$${formatUsdc(advance.amountUsdc)} · repaid from your next payment`}
-              />
-            )}
+            {pending &&
+              (() => {
+                const ready = now >= pending.releaseAt;
+                const total = pending.releaseAt - pending.requestedAt;
+                return (
+                  <InProgressCard
+                    href="/app/withdraw"
+                    Icon={CooldownIcon}
+                    label="Withdrawal"
+                    amount={pending.amountUsdc}
+                    status={ready ? "Ready" : humanDuration(pending.releaseAt - now)}
+                    sub={ready ? "Tap to send it" : "left to wait"}
+                    tone={ready ? "primary" : "warning"}
+                    progress={total > 0 ? (now - pending.requestedAt) / total : 1}
+                  />
+                );
+              })()}
+            {advance &&
+              (() => {
+                // One fee tier: 30 days on mainnet, minutes on the testnet deployment.
+                const tier = (vault?.feePeriodSeconds ?? 30 * 86_400) * 1000;
+                const age = now - advance.takenAt;
+                const [status, sub] =
+                  age <= tier
+                    ? ["Free", `for ${humanDuration(tier - age)}`]
+                    : age <= 2 * tier
+                      ? ["1.5% fee", `3% in ${humanDuration(2 * tier - age)}`]
+                      : age <= 3 * tier
+                        ? ["3% fee", `settles in ${humanDuration(3 * tier - age)}`]
+                        : ["Due", "settles from savings"];
+                return (
+                  <InProgressCard
+                    href="/app/advance"
+                    Icon={AdvanceIcon}
+                    label="Advance · repaid from your next payment"
+                    amount={advance.amountUsdc}
+                    status={status}
+                    sub={sub}
+                    tone={age <= tier ? "primary" : "warning"}
+                    progress={age / (3 * tier)}
+                  />
+                );
+              })()}
           </div>
         )}
 
@@ -520,7 +505,7 @@ export default function HomeScreen() {
                 </Button>
               )}
               {activity && activity.length > 0 ? (
-                <ActivityList items={activity.slice(0, 15)} now={now} unreadAfter={seenAt} className="bg-surface-2/50" />
+                <ActivityList items={activity.slice(0, 15)} now={now} unreadAfter={seenAt} />
               ) : (
                 <p className="py-6 text-center text-[13px] text-muted-foreground">
                   Nothing yet. Payments, advances and withdrawals show up here.
