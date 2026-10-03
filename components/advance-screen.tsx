@@ -1,12 +1,14 @@
 "use client";
 
 import { reportError, track } from "@/lib/analytics";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
+import { isHydrated } from "@/lib/hydrated";
 import type { Address } from "viem";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import { useVault } from "@/hooks/use-vault";
-import { advanceCall, maxAdvance, plainTxError, repayNowCalls, sendWithPasskey, type Call } from "@/lib/vault";
-import { BadgeCheck, Loader2, Zap } from "lucide-react";
+import { advanceCall, maxAdvance, plainTxError, repayNowCalls, sendWithPasskey, type Call, isVaultConfigured } from "@/lib/vault";
+import { BadgeCheck, Zap } from "lucide-react";
+import { BusyCoin } from "./app/busy-coin";
 import { toast } from "sonner";
 import { getKeptBalance } from "@/lib/mock-activity";
 import {
@@ -94,7 +96,10 @@ function AdvanceSkeleton() {
 }
 
 export default function AdvanceScreen() {
-  const [mounted, setMounted] = useState(false);
+  // Arriving by navigation (not a cold open): render real content on the first
+  // frame, so the screen transition slides content, not an empty page.
+  const [returning] = useState(isHydrated);
+  const [mounted, setMounted] = useState(returning);
   const [balance, setBalance] = useState(0);
   const [advance, setAdvance] = useState<Advance | null>(null);
   // A number, not the keypad's digit string: an advance is picked on a
@@ -102,13 +107,13 @@ export default function AdvanceScreen() {
   const [amount, setAmount] = useState(0);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [now, setNow] = useState(Date.now());
-  const [owner, setOwner] = useState<string | null>(null);
+  const [owner, setOwner] = useState<string | null>(() => (returning ? getCachedAddress() : null));
   const [busy, setBusy] = useState(false);
   const [slideKey, setSlideKey] = useState(0);
   const { state: vault, refresh: refreshVault } = useVault(owner);
 
   // Real vault: savings, the open advance and its fee come from the chain.
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!vault) return;
     setBalance(vault.saved);
     setAdvance(vault.advance && { amountUsdc: vault.advance.principal, takenAt: vault.advance.startedAt });
@@ -145,7 +150,10 @@ export default function AdvanceScreen() {
   useEffect(() => {
     setMounted(true);
     setOwner(getCachedAddress());
-    refresh();
+    // The mock layer only stands in when no contracts are configured; loading
+    // it next to a real vault made the numbers blink.
+    if (isVaultConfigured()) setNow(Date.now());
+    else refresh();
   }, []);
 
   // Ticks every minute while an advance is open — enough to move the day
@@ -249,7 +257,7 @@ export default function AdvanceScreen() {
         </Card>
 
         <Button onClick={repay} disabled={busy} variant="outline" className="w-full">
-          {busy && <Loader2 className="animate-spin" />}
+          {busy && <BusyCoin />}
           {vault ? `Repay $${formatUsdc(vault.advance?.owedNow ?? 0)} now from my wallet` : "Repay now (simulate)"}
         </Button>
       </Screen>
@@ -405,7 +413,7 @@ export default function AdvanceScreen() {
             </Card>
             {busy ? (
               <Button size="lg" disabled className="w-full">
-                <Loader2 className="animate-spin" />
+                <BusyCoin />
                 Borrowing…
               </Button>
             ) : (

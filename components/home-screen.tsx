@@ -8,7 +8,6 @@ import {
   ArrowUpFromLine,
   Bell,
   Send,
-  Loader2,
   Lock,
   Plus,
   QrCode as QrIcon,
@@ -24,6 +23,7 @@ import { useActivity } from "@/hooks/use-activity";
 import { useNotificationPermission } from "@/hooks/use-notification-permission";
 import { registerPush } from "@/lib/push";
 import ActivityList from "./activity-list";
+import { BusyCoin } from "./app/busy-coin";
 import InProgressCard, { humanDuration } from "./app/in-progress-card";
 import { AdvanceIcon, CooldownIcon, SplitIcon } from "./waitlist/feature-icons";
 import { isVaultConfigured, plainTxError, processCall, sendWithPasskey } from "@/lib/vault";
@@ -365,11 +365,11 @@ export default function HomeScreen() {
             </span>
             {autoSplitFailed ? (
               <Button size="sm" onClick={splitNow} disabled={splitting}>
-                {splitting && <Loader2 className="animate-spin" />}
+                {splitting && <BusyCoin />}
                 {splitting ? "Splitting" : "Split now"}
               </Button>
             ) : (
-              <Loader2 className="size-5 animate-spin text-primary" aria-label="Splitting" />
+              <BusyCoin className="size-5 text-primary" />
             )}
           </div>
         )}

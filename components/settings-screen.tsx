@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
+import { isHydrated } from "@/lib/hydrated";
 import type { Address } from "viem";
 import { toast } from "sonner";
-import { ChevronRight, Fingerprint, Globe, Loader2, Moon, PieChart, ShieldAlert, Smartphone, Sun, Timer, Wallet } from "lucide-react";
+import { ChevronRight, Fingerprint, Globe, Moon, PieChart, ShieldAlert, Smartphone, Sun, Timer, Wallet } from "lucide-react";
+import { BusyCoin } from "./app/busy-coin";
 import { cn } from "@/lib/utils";
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from "@/lib/theme";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
@@ -70,8 +72,11 @@ function SettingsSkeleton() {
 }
 
 export default function SettingsScreen() {
-  const [mounted, setMounted] = useState(false);
-  const [address, setAddress] = useState<string | null>(null);
+  // Arriving by navigation (not a cold open): render real content on the first
+  // frame, so the screen transition slides content, not an empty page.
+  const [returning] = useState(isHydrated);
+  const [mounted, setMounted] = useState(returning);
+  const [address, setAddress] = useState<string | null>(() => (returning ? getCachedAddress() : null));
   const [settings, setSettings] = useState<VaultSettings>(DEFAULT_SETTINGS);
   const [profileOpen, setProfileOpen] = useState(false);
   const [theme, setTheme] = useState<ThemeChoice>("dark");
@@ -110,7 +115,7 @@ export default function SettingsScreen() {
     }
   }
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (vault) setSettings({ keepBps: vault.keepBps, cooldownSeconds: vault.cooldownSeconds });
   }, [vault]);
 
@@ -173,11 +178,11 @@ export default function SettingsScreen() {
               </div>
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <Button variant="secondary" size="sm" disabled={busy !== null} onClick={() => runPending("cancel")}>
-                  {busy === "cancel" && <Loader2 className="animate-spin" />}
+                  {busy === "cancel" && <BusyCoin />}
                   Cancel change
                 </Button>
                 <Button size="sm" disabled={!ready || busy !== null} onClick={() => runPending("apply")}>
-                  {busy === "apply" && <Loader2 className="animate-spin" />}
+                  {busy === "apply" && <BusyCoin />}
                   {ready ? "Apply now" : "Not yet"}
                 </Button>
               </div>
@@ -277,7 +282,15 @@ export default function SettingsScreen() {
         />
       </Group>
 
-      <p className="pt-2 text-center text-[12px] text-muted-foreground">Keep Yours · Get paid. Keep yours.</p>
+      <div className="pt-2 text-center text-[12px] text-muted-foreground">
+        <p>Keep Yours · Get paid. Keep yours.</p>
+        {(process.env.NEXT_PUBLIC_APP_VERSION || process.env.NEXT_PUBLIC_APP_COMMIT) && (
+          <p className="mt-1 font-mono text-[11px] tabular-nums opacity-80">
+            {process.env.NEXT_PUBLIC_APP_VERSION ? `v${process.env.NEXT_PUBLIC_APP_VERSION}` : "dev"}
+            {process.env.NEXT_PUBLIC_APP_COMMIT ? ` · ${process.env.NEXT_PUBLIC_APP_COMMIT}` : ""}
+          </p>
+        )}
+      </div>
     </Screen>
   );
 }

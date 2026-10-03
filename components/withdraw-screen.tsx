@@ -1,9 +1,11 @@
 "use client";
 
 import { reportError, track } from "@/lib/analytics";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
+import { isHydrated } from "@/lib/hydrated";
 import type { Address } from "viem";
-import { ArrowDown, Loader2, Lock, Timer } from "lucide-react";
+import { ArrowDown, Lock, Timer } from "lucide-react";
+import { BusyCoin } from "./app/busy-coin";
 import { toast } from "sonner";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import { useVault } from "@/hooks/use-vault";
@@ -12,8 +14,7 @@ import {
   executeWithdrawCall,
   plainTxError,
   requestWithdrawCall,
-  sendWithPasskey,
-} from "@/lib/vault";
+  sendWithPasskey, isVaultConfigured } from "@/lib/vault";
 import { getKeptBalance } from "@/lib/mock-activity";
 import { getVaultSettings, DEFAULT_SETTINGS } from "@/lib/vault-settings";
 import {
@@ -58,9 +59,12 @@ function WithdrawSkeleton() {
 }
 
 export default function WithdrawScreen() {
-  const [mounted, setMounted] = useState(false);
+  // Arriving by navigation (not a cold open): render real content on the first
+  // frame, so the screen transition slides content, not an empty page.
+  const [returning] = useState(isHydrated);
+  const [mounted, setMounted] = useState(returning);
   const [balance, setBalance] = useState(0);
-  const [address, setAddress] = useState<string | null>(null);
+  const [address, setAddress] = useState<string | null>(() => (returning ? getCachedAddress() : null));
   const [cooldownSeconds, setCooldownSeconds] = useState(DEFAULT_SETTINGS.cooldownSeconds);
   const [pending, setPending] = useState<PendingWithdrawal | null>(null);
   const [amount, setAmount] = useState("");
@@ -71,7 +75,7 @@ export default function WithdrawScreen() {
   const { state: vault, refresh: refreshVault } = useVault(address);
 
   // Real vault: what can leave now is savings minus what an open advance reserves.
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!vault) return;
     setBalance(vault.withdrawable);
     setCooldownSeconds(vault.cooldownSeconds);
@@ -107,7 +111,10 @@ export default function WithdrawScreen() {
     setMounted(true);
     setAddress(getCachedAddress());
     setCooldownSeconds((getVaultSettings() ?? DEFAULT_SETTINGS).cooldownSeconds);
-    refresh();
+    // The mock layer only stands in when no contracts are configured; loading
+    // it next to a real vault made the numbers blink.
+    if (isVaultConfigured()) setNow(Date.now());
+    else refresh();
   }, []);
 
   // Live countdown — ticks every second while a withdrawal is pending.
@@ -228,12 +235,12 @@ export default function WithdrawScreen() {
 
         {released ? (
           <Button onClick={send} disabled={busy} className="w-full">
-            {busy && <Loader2 className="animate-spin" />}
+            {busy && <BusyCoin />}
             Send to my wallet
           </Button>
         ) : (
           <Button onClick={cancel} disabled={busy} variant="destructive" className="w-full">
-            {busy && <Loader2 className="animate-spin" />}
+            {busy && <BusyCoin />}
             Cancel withdrawal
           </Button>
         )}
@@ -321,7 +328,7 @@ export default function WithdrawScreen() {
             </p>
             {busy ? (
               <Button size="lg" disabled className="w-full">
-                <Loader2 className="animate-spin" />
+                <BusyCoin />
                 Starting…
               </Button>
             ) : (

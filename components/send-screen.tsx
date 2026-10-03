@@ -1,10 +1,12 @@
 "use client";
 
 import { reportError, track } from "@/lib/analytics";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
+import { isHydrated } from "@/lib/hydrated";
 import Link from "next/link";
 import { isAddress, isAddressEqual, type Address, type Hex } from "viem";
-import { ChevronLeft, CircleCheck, ClipboardPaste, ExternalLink, Loader2, Wallet } from "lucide-react";
+import { ChevronLeft, CircleCheck, ClipboardPaste, ExternalLink, Wallet } from "lucide-react";
+import { BusyCoin } from "./app/busy-coin";
 import { toast } from "sonner";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import { useUsdcBalance } from "@/hooks/use-usdc-balance";
@@ -35,8 +37,11 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 export default function SendScreen() {
-  const [mounted, setMounted] = useState(false);
-  const [address, setAddress] = useState<string | null>(null);
+  // Arriving by navigation (not a cold open): render real content on the first
+  // frame, so the screen transition slides content, not an empty page.
+  const [returning] = useState(isHydrated);
+  const [mounted, setMounted] = useState(returning);
+  const [address, setAddress] = useState<string | null>(() => (returning ? getCachedAddress() : null));
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -170,7 +175,7 @@ export default function SendScreen() {
             </div>
             <div className="text-right">
               {balance === null ? (
-                <Loader2 className="ml-auto size-4 animate-spin text-muted-foreground" />
+                <BusyCoin className="ml-auto size-4 text-muted-foreground" />
               ) : (
                 <Money value={available} className="text-[14px] font-semibold" />
               )}
@@ -258,7 +263,7 @@ export default function SendScreen() {
             )}
             {sending ? (
               <Button size="lg" disabled className="w-full">
-                <Loader2 className="animate-spin" />
+                <BusyCoin />
                 Sending…
               </Button>
             ) : (
