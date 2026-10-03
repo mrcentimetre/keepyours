@@ -7,7 +7,7 @@ const RIM = "#0b7a41";
 
 type IconProps = SVGProps<SVGSVGElement>;
 
-function Shadow({ id }: { id: string }) {
+export function Shadow({ id }: { id: string }) {
   return (
     <filter id={id} x="-30%" y="-30%" width="160%" height="170%">
       <feDropShadow dx="0" dy="1.6" stdDeviation="1.4" floodColor="#08452c" floodOpacity="0.28" />
@@ -16,7 +16,7 @@ function Shadow({ id }: { id: string }) {
 }
 
 // A coin seen from slightly above: a face on top of a thin rim.
-function Coin({ cx, cy, face, rim = RIM, r = 13 }: { cx: number; cy: number; face: string; rim?: string; r?: number }) {
+export function Coin({ cx, cy, face, rim = RIM, r = 13 }: { cx: number; cy: number; face: string; rim?: string; r?: number }) {
   const ry = r * 0.42;
   const depth = r * 0.34;
   return (
