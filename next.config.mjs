@@ -1,6 +1,8 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { execFileSync } from "node:child_process";
 import withPWAInit from "@ducanh2912/next-pwa";
+import { appVersion } from "./scripts/version.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -60,8 +62,24 @@ const withPWA = withPWAInit({
   ],
 });
 
+// Version from the commit history (scripts/version.mjs), plus the commit it
+// was built from. Vercel needs VERCEL_DEEP_CLONE=true for the full history;
+// without it the version is left blank rather than guessed.
+function commitSha() {
+  if (process.env.VERCEL_GIT_COMMIT_SHA) return process.env.VERCEL_GIT_COMMIT_SHA.slice(0, 7);
+  try {
+    return execFileSync("git", ["rev-parse", "--short", "HEAD"], { encoding: "utf8" }).trim();
+  } catch {
+    return "";
+  }
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  env: {
+    NEXT_PUBLIC_APP_VERSION: appVersion() ?? "",
+    NEXT_PUBLIC_APP_COMMIT: commitSha(),
+  },
   reactStrictMode: true,
   // There is a stray package-lock.json in the home directory; without this,
   // the bundler walks up past the repo looking for the workspace root.
