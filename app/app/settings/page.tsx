@@ -1,3 +1,4 @@
+import PageTransition from "@/components/app/page-transition";
 import type { Metadata } from "next";
 import SettingsScreen from "@/components/settings-screen";
 
@@ -6,5 +7,9 @@ export const metadata: Metadata = {
 };
 
 export default function SettingsPage() {
-  return <SettingsScreen />;
+  return (
+    <PageTransition>
+      <SettingsScreen />
+    </PageTransition>
+  );
 }

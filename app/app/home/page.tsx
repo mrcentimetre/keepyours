@@ -1,3 +1,4 @@
+import PageTransition from "@/components/app/page-transition";
 import type { Metadata } from "next";
 import HomeScreen from "@/components/home-screen";
 
@@ -6,5 +7,9 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  return <HomeScreen />;
+  return (
+    <PageTransition>
+      <HomeScreen />
+    </PageTransition>
+  );
 }

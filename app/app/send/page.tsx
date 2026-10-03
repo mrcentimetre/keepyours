@@ -1,3 +1,4 @@
+import PageTransition from "@/components/app/page-transition";
 import type { Metadata } from "next";
 import SendScreen from "@/components/send-screen";
 
@@ -6,5 +7,9 @@ export const metadata: Metadata = {
 };
 
 export default function SendPage() {
-  return <SendScreen />;
+  return (
+    <PageTransition>
+      <SendScreen />
+    </PageTransition>
+  );
 }

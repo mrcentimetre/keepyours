@@ -12,7 +12,7 @@ function Screen({ className, children }: { className?: string; children: React.R
   return (
     <main
       className={cn(
-        "flex min-h-dvh flex-col gap-6 px-5 pt-[calc(env(safe-area-inset-top)+18px)] pb-6 duration-300 animate-in fade-in slide-in-from-bottom-1",
+        "flex min-h-dvh flex-col gap-6 px-5 pt-[calc(env(safe-area-inset-top)+18px)] pb-6",
         className
       )}
     >

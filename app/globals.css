@@ -366,6 +366,61 @@ html::before {
   }
 }
 
+/* ── page transitions (components/app/page-transition.tsx) ─────────
+   Going deeper slides in from the right, going back slides right, tab
+   switches crossfade: the iPhone conventions. The tab bar stays put. */
+::view-transition {
+  pointer-events: none; /* taps during a transition reach the new page */
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none; /* only the page content moves, not the whole window */
+}
+::view-transition-group(bottom-nav) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(bottom-nav) {
+  display: none;
+}
+::view-transition-new(bottom-nav) {
+  animation: none;
+}
+
+::view-transition-old(.nav-forward) {
+  animation: 180ms ease-in both ky-vt-fade-out, 340ms cubic-bezier(0.22, 1, 0.36, 1) both ky-vt-to-left;
+}
+::view-transition-new(.nav-forward) {
+  animation: 240ms ease-out 60ms both ky-vt-fade-in, 340ms cubic-bezier(0.22, 1, 0.36, 1) both ky-vt-from-right;
+}
+::view-transition-old(.nav-back) {
+  animation: 180ms ease-in both ky-vt-fade-out, 340ms cubic-bezier(0.22, 1, 0.36, 1) both ky-vt-to-right;
+}
+::view-transition-new(.nav-back) {
+  animation: 240ms ease-out 60ms both ky-vt-fade-in, 340ms cubic-bezier(0.22, 1, 0.36, 1) both ky-vt-from-left;
+}
+::view-transition-old(.nav-tab) {
+  animation: 140ms ease-out both ky-vt-fade-out;
+}
+::view-transition-new(.nav-tab) {
+  animation: 200ms ease-out 40ms both ky-vt-fade-in;
+}
+
+@keyframes ky-vt-fade-in { from { opacity: 0; } }
+@keyframes ky-vt-fade-out { to { opacity: 0; } }
+@keyframes ky-vt-from-right { from { translate: 48px 0; } }
+@keyframes ky-vt-to-left { to { translate: -48px 0; } }
+@keyframes ky-vt-from-left { from { translate: -48px 0; } }
+@keyframes ky-vt-to-right { to { translate: 48px 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
 /* In lists the icons stand still; only the in-progress cards move. */
 .ic-still * {
   animation: none !important;

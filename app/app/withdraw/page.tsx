@@ -1,3 +1,4 @@
+import PageTransition from "@/components/app/page-transition";
 import type { Metadata } from "next";
 import WithdrawScreen from "@/components/withdraw-screen";
 
@@ -6,5 +7,9 @@ export const metadata: Metadata = {
 };
 
 export default function WithdrawPage() {
-  return <WithdrawScreen />;
+  return (
+    <PageTransition>
+      <WithdrawScreen />
+    </PageTransition>
+  );
 }
