@@ -13,7 +13,10 @@ import { cn } from "@/lib/utils";
 // --card/--primary/... tokens would resolve inside the sheet.
 
 function Sheet(props: React.ComponentProps<typeof Drawer.Root>) {
-  return <Drawer.Root {...props} />;
+  // repositionInputs off: on iPhone, vaul lifting the sheet by the keyboard's
+  // height AND iOS scrolling to the focused input stacked up, leaving the
+  // sheet floating with an empty gap under it. iOS alone gets it right.
+  return <Drawer.Root repositionInputs={false} {...props} />;
 }
 
 function SheetContent({

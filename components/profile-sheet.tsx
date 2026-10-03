@@ -106,7 +106,7 @@ export default function ProfileSheet({
                 onChange={(e) => setDraft(e.target.value)}
                 maxLength={MAX_NAME_LENGTH}
                 placeholder="e.g. Nimal"
-                autoComplete="nickname"
+                autoComplete="off"
                 enterKeyHint="done"
               />
               <Button type="submit" disabled={!changed} className="h-12 px-5">
