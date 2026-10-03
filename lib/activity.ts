@@ -22,7 +22,9 @@ export type ActivityKind =
   | "settled"
   | "withdraw-requested"
   | "withdraw-cancelled"
-  | "withdrawn";
+  | "withdrawn"
+  | "settings-requested"
+  | "settings-applied";
 
 /** What a phone notification says for each kind of on-chain event. */
 export function notificationText(i: { kind: ActivityKind; amount: number; detail?: string }): { title: string; body: string } {
@@ -46,6 +48,10 @@ export function notificationText(i: { kind: ActivityKind; amount: number; detail
       return { title: `Withdrawal of ${$} cancelled`, body: "Your savings stay put." };
     case "withdrawn":
       return { title: `${$} withdrawn`, body: "It's in your wallet now." };
+    case "settings-requested":
+      return { title: "Settings change requested", body: "It applies after your waiting period. If this wasn't you, open Keep Yours and cancel it." };
+    case "settings-applied":
+      return { title: "Vault settings updated", body: "Your new split and waiting period are in force." };
   }
 }
 
@@ -72,6 +78,8 @@ const ev = {
   withdrawn: parseAbiItem("event Withdrawn(address indexed vault, uint256 amount, address to)"),
   repaid: parseAbiItem("event AdvanceRepaid(address indexed vault, uint256 principal, uint256 fee)"),
   settled: parseAbiItem("event Settled(address indexed vault, uint256 owed)"),
+  settingsProposed: parseAbiItem("event SettingsProposed(address indexed vault, uint64 applyAt)"),
+  settingsApplied: parseAbiItem("event SettingsApplied(address indexed vault)"),
   transfer: parseAbiItem("event Transfer(address indexed from, address indexed to, uint256 value)"),
 };
 
@@ -89,7 +97,7 @@ async function vaultCreatedBlock(owner: Address): Promise<bigint> {
 export async function readActivity(owner: Address, vault: Address): Promise<ActivityItem[]> {
   const fromBlock = await vaultCreatedBlock(owner);
   const onVault = { address: vault, fromBlock } as const;
-  const [processed, advanced, requested, cancelled, withdrawn, repaid, settled, into, out] = await Promise.all([
+  const [processed, advanced, requested, cancelled, withdrawn, repaid, settled, into, out, proposedS, appliedS] = await Promise.all([
     logs.getLogs({ ...onVault, event: ev.processed }),
     logs.getLogs({ ...onVault, event: ev.advanced }),
     logs.getLogs({ ...onVault, event: ev.requested }),
@@ -99,6 +107,8 @@ export async function readActivity(owner: Address, vault: Address): Promise<Acti
     logs.getLogs({ address: POOL!, event: ev.settled, args: { vault }, fromBlock }),
     logs.getLogs({ address: USDC_ADDRESS!, event: ev.transfer, args: { to: owner }, fromBlock }),
     logs.getLogs({ address: USDC_ADDRESS!, event: ev.transfer, args: { from: owner }, fromBlock }),
+    logs.getLogs({ ...onVault, event: ev.settingsProposed }),
+    logs.getLogs({ ...onVault, event: ev.settingsApplied }),
   ]);
 
   // Transfers the vault or pool already explain (spend share, advances,
@@ -139,6 +149,9 @@ export async function readActivity(owner: Address, vault: Address): Promise<Acti
     });
   }
   for (const l of settled) items.push({ ...base(l), kind: "settled", amount: usd(l.args.owed!) });
+  for (const l of proposedS) items.push({ ...base(l), kind: "settings-requested", amount: 0 });
+  // Creating the vault applies its first settings too; that isn't a "change".
+  for (const l of appliedS) if (l.blockNumber !== fromBlock) items.push({ ...base(l), kind: "settings-applied", amount: 0 });
   for (const l of into) {
     if (own.has(l.args.from!.toLowerCase())) continue;
     items.push({ ...base(l), kind: "received", amount: usd(l.args.value!), detail: "straight to your wallet" });

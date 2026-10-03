@@ -86,6 +86,19 @@ export function CancelledIcon(props: IconProps) {
   return <CoinWithBadge face="url(#ic-act-white)" rim="#b9cfc3" badge={MUTED} glyph={<path d="M32.2 31.2l5.6 5.6m0-5.6-5.6 5.6" />} {...props} />;
 }
 
+/** The vault's split or waiting period changed (or a change was requested). */
+export function SettingsIcon(props: IconProps) {
+  return (
+    <CoinWithBadge
+      face="url(#ic-act-white)"
+      rim="#8fcfae"
+      badge={NIGHT}
+      glyph={<path d="M31.5 31.5h7M31.5 34h7M31.5 36.5h7" />}
+      {...props}
+    />
+  );
+}
+
 /** An advance paid back. */
 export function RepaidIcon(props: IconProps) {
   return <StackWithBadge badge={GREEN} glyph={<path d="M38.5 34h-7m0 0 2.8-2.8M31.5 34l2.8 2.8" />} {...props} />;

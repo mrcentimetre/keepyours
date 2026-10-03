@@ -10,6 +10,7 @@ import {
   ReceivedIcon,
   RepaidIcon,
   SentIcon,
+  SettingsIcon,
   SettledIcon,
   WithdrawnIcon,
 } from "./app/activity-icons";
@@ -17,8 +18,8 @@ import {
 type Look = {
   title: string;
   Icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  /** "in" is money arriving (shown in green with +), "out" money leaving (−), "move" neither. */
-  flow: "in" | "out" | "move";
+  /** "in" is money arriving (shown in green with +), "out" money leaving (−), "move" neither, "none" no amount. */
+  flow: "in" | "out" | "move" | "none";
   subtitle: (i: ActivityItem) => string;
 };
 
@@ -45,6 +46,8 @@ const LOOK: Record<ActivityKind, Look> = {
   "withdraw-requested": { title: "Withdrawal started", Icon: CooldownIcon, flow: "move", subtitle: () => "Waiting period" },
   "withdraw-cancelled": { title: "Withdrawal cancelled", Icon: CancelledIcon, flow: "move", subtitle: () => "Stayed in savings" },
   withdrawn: { title: "Withdrawn", Icon: WithdrawnIcon, flow: "move", subtitle: () => "Savings to wallet" },
+  "settings-requested": { title: "Settings change requested", Icon: SettingsIcon, flow: "none", subtitle: () => "Waits out your waiting period" },
+  "settings-applied": { title: "Settings updated", Icon: SettingsIcon, flow: "none", subtitle: () => "New split and waiting period" },
 };
 
 function dayLabel(at: number, now: number): string {
@@ -114,8 +117,8 @@ export default function ActivityList({
                           look.flow === "in" && "text-primary"
                         )}
                       >
-                        {look.flow === "in" ? "+" : look.flow === "out" ? "−" : ""}
-                        {$(i.amount)}
+                        {look.flow === "none" ? "" : look.flow === "in" ? "+" : look.flow === "out" ? "−" : ""}
+                        {look.flow === "none" ? "" : $(i.amount)}
                       </span>
                       <span className="block text-[12px] text-muted-foreground tabular-nums">{clock(i.at)}</span>
                     </span>
