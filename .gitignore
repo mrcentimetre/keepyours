@@ -34,3 +34,6 @@ ui-inspirations/
 **/.DS_Store
 .vscode/
 .idea/
+.vercel
+.env*
+!.env.example
