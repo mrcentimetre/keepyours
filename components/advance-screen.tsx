@@ -1,6 +1,6 @@
 "use client";
 
-import { track } from "@/lib/analytics";
+import { reportError, track } from "@/lib/analytics";
 import { useEffect, useState } from "react";
 import type { Address } from "viem";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
@@ -124,6 +124,7 @@ export default function AdvanceScreen() {
     } catch (e) {
       toast.error(plainTxError(e));
       track("tx_failed", { action: "advance", reason: plainTxError(e) });
+      reportError(e, "advance");
       setSlideKey((k) => k + 1);
       return false;
     } finally {

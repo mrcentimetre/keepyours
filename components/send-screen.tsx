@@ -1,6 +1,6 @@
 "use client";
 
-import { track } from "@/lib/analytics";
+import { reportError, track } from "@/lib/analytics";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { isAddress, isAddressEqual, type Address, type Hex } from "viem";
@@ -113,6 +113,7 @@ export default function SendScreen() {
       const msg = e instanceof Error && /different wallet/.test(e.message) ? e.message : plainError(e);
       setError(msg);
       track("tx_failed", { action: "send", reason: msg.startsWith("That passkey") ? "different_wallet" : msg });
+      reportError(e, "send");
     } finally {
       setSending(false);
     }

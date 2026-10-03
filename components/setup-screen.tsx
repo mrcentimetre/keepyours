@@ -1,6 +1,6 @@
 "use client";
 
-import { track } from "@/lib/analytics";
+import { reportError, track } from "@/lib/analytics";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Address } from "viem";
@@ -54,6 +54,7 @@ export default function SetupScreen() {
     } catch (e) {
       setError(plainTxError(e));
       track("tx_failed", { action: "create_vault", reason: plainTxError(e) });
+      reportError(e, "create_vault");
       setBusy(false);
     }
   }
