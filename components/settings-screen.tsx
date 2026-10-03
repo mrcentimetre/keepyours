@@ -1,13 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronRight, Fingerprint, Globe, Moon, PieChart, ShieldAlert, Smartphone, Sun, Timer, Wallet } from "lucide-react";
+import type { Address } from "viem";
+import { toast } from "sonner";
+import { ChevronRight, Fingerprint, Globe, Loader2, Moon, PieChart, ShieldAlert, Smartphone, Sun, Timer, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from "@/lib/theme";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import { useProfileName } from "@/hooks/use-profile-name";
 import { useVault } from "@/hooks/use-vault";
-import { isVaultConfigured } from "@/lib/vault";
+import {
+  applySettingsCall,
+  isVaultConfigured,
+  plainTxError,
+  proposeSettingsCall,
+  sendWithPasskey,
+} from "@/lib/vault";
+import { reportError, track } from "@/lib/analytics";
+import VaultSettingsSheet from "./vault-settings-sheet";
+import { humanDuration } from "./app/in-progress-card";
+import { Button } from "./ui/button";
 import { getVaultSettings, DEFAULT_SETTINGS, type VaultSettings } from "@/lib/vault-settings";
 import { formatCooldown, shorten } from "@/lib/format";
 import { Screen, ScreenHeader, SectionLabel, WalletAvatar } from "./app/screen";
@@ -65,7 +77,38 @@ export default function SettingsScreen() {
   const [theme, setTheme] = useState<ThemeChoice>("dark");
   const name = useProfileName();
   // Settings and the shown address come from the vault once it exists.
-  const { payTo, state: vault } = useVault(address);
+  const { payTo, state: vault, refresh: refreshVault } = useVault(address);
+  const [editOpen, setEditOpen] = useState(false);
+  const [busy, setBusy] = useState<"apply" | "cancel" | null>(null);
+  const [now, setNow] = useState(Date.now());
+
+  // Tick the countdown while a settings change is waiting.
+  useEffect(() => {
+    if (!vault?.pendingSettings) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [vault?.pendingSettings]);
+
+  async function runPending(kind: "apply" | "cancel") {
+    if (!vault) return;
+    setBusy(kind);
+    try {
+      // Cancelling = re-proposing what's in force now, which isn't weaker, so
+      // it applies at once and clears the waiting change.
+      const call =
+        kind === "apply" ? applySettingsCall(vault.address) : proposeSettingsCall(vault, vault.keepBps, vault.cooldownSeconds);
+      await sendWithPasskey(address as Address, call);
+      track(kind === "apply" ? "settings_applied" : "settings_cancelled");
+      toast.success(kind === "apply" ? "Settings updated" : "Change cancelled. Nothing changed.");
+      await refreshVault();
+    } catch (e) {
+      toast.error(plainTxError(e));
+      track("tx_failed", { action: `settings_${kind}`, reason: plainTxError(e) });
+      reportError(e, `settings_${kind}`);
+    } finally {
+      setBusy(null);
+    }
+  }
 
   useEffect(() => {
     if (vault) setSettings({ keepBps: vault.keepBps, cooldownSeconds: vault.cooldownSeconds });
@@ -105,10 +148,92 @@ export default function SettingsScreen() {
       </Card>
       <ProfileSheet open={profileOpen} onOpenChange={setProfileOpen} address={address} />
 
-      <Group label="Vault" note="Changing these after setup isn't built yet — it's coming in a later update.">
-        <Row icon={<PieChart className="size-[18px]" />} label="Split" value={`Spend ${100 - keepPct}% · Keep ${keepPct}%`} />
-        <Row icon={<Timer className="size-[18px]" />} label="Waiting period" value={formatCooldown(settings.cooldownSeconds)} />
+      {vault?.pendingSettings &&
+        (() => {
+          const p = vault.pendingSettings;
+          const ready = now >= p.applyAt;
+          const keep = Math.round(p.keepBps / 100);
+          return (
+            <section className="rounded-[22px] bg-card p-4 shadow-sm ring-1 ring-hairline">
+              <div className="flex items-start gap-3">
+                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning">
+                  <Timer className="size-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[14px] font-semibold">{ready ? "Change ready to apply" : "Change waiting"}</p>
+                  <p className="text-[13px] text-muted-foreground">
+                    Spend {100 - keep}% · Keep {keep}% · {formatCooldown(p.cooldownSeconds)} waiting period
+                  </p>
+                  {!ready && (
+                    <p className="mt-1 text-[13px] font-semibold text-warning tabular-nums">
+                      Applies in {humanDuration(p.applyAt - now)}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <Button variant="secondary" size="sm" disabled={busy !== null} onClick={() => runPending("cancel")}>
+                  {busy === "cancel" && <Loader2 className="animate-spin" />}
+                  Cancel change
+                </Button>
+                <Button size="sm" disabled={!ready || busy !== null} onClick={() => runPending("apply")}>
+                  {busy === "apply" && <Loader2 className="animate-spin" />}
+                  {ready ? "Apply now" : "Not yet"}
+                </Button>
+              </div>
+            </section>
+          );
+        })()}
+
+      <Group
+        label="Vault"
+        note={
+          vault
+            ? "Keeping more or waiting longer applies at once. Keeping less or waiting less waits out your current waiting period first."
+            : undefined
+        }
+      >
+        {vault && vault.guardian !== undefined ? (
+          <>
+            <button type="button" onClick={() => setEditOpen(true)} className="w-full text-left active:bg-surface-2">
+              <Row
+                icon={<PieChart className="size-[18px]" />}
+                label="Split"
+                value={
+                  <span className="inline-flex items-center gap-1">
+                    Spend {100 - keepPct}% · Keep {keepPct}% <ChevronRight className="size-4" />
+                  </span>
+                }
+              />
+            </button>
+            <button type="button" onClick={() => setEditOpen(true)} className="w-full text-left active:bg-surface-2">
+              <Row
+                icon={<Timer className="size-[18px]" />}
+                label="Waiting period"
+                value={
+                  <span className="inline-flex items-center gap-1">
+                    {formatCooldown(settings.cooldownSeconds)} <ChevronRight className="size-4" />
+                  </span>
+                }
+              />
+            </button>
+          </>
+        ) : (
+          <>
+            <Row icon={<PieChart className="size-[18px]" />} label="Split" value={`Spend ${100 - keepPct}% · Keep ${keepPct}%`} />
+            <Row icon={<Timer className="size-[18px]" />} label="Waiting period" value={formatCooldown(settings.cooldownSeconds)} />
+          </>
+        )}
       </Group>
+      {vault && (
+        <VaultSettingsSheet
+          open={editOpen}
+          onOpenChange={setEditOpen}
+          owner={address}
+          vault={vault}
+          onChanged={refreshVault}
+        />
+      )}
 
       <section className="flex flex-col gap-2">
         <SectionLabel className="px-1">Appearance</SectionLabel>

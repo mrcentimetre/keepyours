@@ -68,6 +68,9 @@ export type AppEvent =
   | "withdraw_completed"
   | "send_completed"
   | "notifications_answered"
+  | "settings_proposed"
+  | "settings_applied"
+  | "settings_cancelled"
   | "tx_failed";
 
 /** A caught error (a failed transaction, say) as a PostHog issue with its stack trace. */

@@ -23,6 +23,9 @@ export const factoryAbi = parseAbi([
 
 export const vaultAbi = parseAbi([
   "function process()",
+  `function proposeSettings(${CONFIG} next)`,
+  "function applySettings()",
+  `function pendingSettings() view returns ((${CONFIG} next, uint64 applyAt))`,
   "function advance(uint256 amount)",
   "function requestWithdraw(uint256 amount)",
   "function cancelWithdraw()",
@@ -51,6 +54,9 @@ export type VaultState = {
   cooldownSeconds: number;
   spendTo: Address;
   safePlace: Address;
+  guardian: Address;
+  /** A weaker settings change waiting out the current waiting period. */
+  pendingSettings: { keepBps: number; cooldownSeconds: number; applyAt: number } | null; // applyAt in ms
   saved: number;
   withdrawable: number;
   unprocessed: number;
@@ -75,7 +81,7 @@ export async function vaultOf(owner: Address): Promise<Address | null> {
 export async function readVault(vault: Address): Promise<VaultState> {
   const c = { address: vault, abi: vaultAbi } as const;
   const p = { address: POOL!, abi: poolAbi } as const;
-  const [config, saved, withdrawable, unprocessed, pending, loan, owedNow, feeBps, period, liquidity] = await publicClient.multicall({
+  const [config, saved, withdrawable, unprocessed, pending, loan, owedNow, feeBps, period, liquidity, nextSettings] = await publicClient.multicall({
     allowFailure: false,
     contracts: [
       { ...c, functionName: "config" },
@@ -88,6 +94,7 @@ export async function readVault(vault: Address): Promise<VaultState> {
       { ...p, functionName: "feeBpsNow", args: [vault] },
       { ...p, functionName: "period" },
       { address: USDC_ADDRESS!, abi: erc20Abi, functionName: "balanceOf", args: [POOL!] },
+      { ...c, functionName: "pendingSettings" },
     ],
   });
   const [principal, start] = loan;
@@ -97,6 +104,15 @@ export async function readVault(vault: Address): Promise<VaultState> {
     cooldownSeconds: config.cooldown,
     spendTo: config.spendTo,
     safePlace: config.safePlace,
+    guardian: config.guardian,
+    pendingSettings:
+      nextSettings.applyAt > BigInt(0)
+        ? {
+            keepBps: nextSettings.next.keepBps,
+            cooldownSeconds: nextSettings.next.cooldown,
+            applyAt: Number(nextSettings.applyAt) * 1000,
+          }
+        : null,
     saved: usd(saved),
     withdrawable: usd(withdrawable),
     unprocessed: usd(unprocessed),
@@ -158,6 +174,39 @@ export function createVaultCall(owner: Address, keepBps: number, cooldownSeconds
       args: [{ spendTo: owner, safePlace: owner, guardian: zeroAddress, keepBps, cooldown: cooldownSeconds }],
     }),
   };
+}
+
+/**
+ * The contract's rule, from the split and waiting period's side: keeping less
+ * or waiting less is weaker, and weaker changes wait out the current waiting
+ * period. (Addresses and the guardian aren't changed from the app.)
+ */
+export function isWeakerChange(state: VaultState, keepBps: number, cooldownSeconds: number): boolean {
+  return keepBps < state.keepBps || cooldownSeconds < state.cooldownSeconds;
+}
+
+/** Change the split and waiting period, keeping every address and the guardian as they are. */
+export function proposeSettingsCall(state: VaultState, keepBps: number, cooldownSeconds: number): Call {
+  return {
+    to: state.address,
+    data: encodeFunctionData({
+      abi: vaultAbi,
+      functionName: "proposeSettings",
+      args: [
+        {
+          spendTo: state.spendTo,
+          safePlace: state.safePlace,
+          guardian: state.guardian,
+          keepBps,
+          cooldown: cooldownSeconds,
+        },
+      ],
+    }),
+  };
+}
+
+export function applySettingsCall(vault: Address): Call {
+  return { to: vault, data: encodeFunctionData({ abi: vaultAbi, functionName: "applySettings" }) };
 }
 
 export function processCall(vault: Address): Call {
