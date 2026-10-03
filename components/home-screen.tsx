@@ -1,7 +1,7 @@
 "use client";
 
 import { track } from "@/lib/analytics";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowDownLeft,
@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
+import { isHydrated } from "@/lib/hydrated";
 import { useUsdcBalance } from "@/hooks/use-usdc-balance";
 import { useVault } from "@/hooks/use-vault";
 import { useActivity } from "@/hooks/use-activity";
@@ -170,9 +171,14 @@ function HomeSkeleton() {
 }
 
 export default function HomeScreen() {
-  const [mounted, setMounted] = useState(false);
-  const [address, setAddress] = useState<string | null>(null);
-  const [settings, setSettings] = useState<VaultSettings>(DEFAULT_SETTINGS);
+  // Coming back to Home (not the first open): everything is cached, so render
+  // it straight away instead of flashing a skeleton.
+  const [returning] = useState(isHydrated);
+  const [mounted, setMounted] = useState(returning);
+  const [address, setAddress] = useState<string | null>(() => (returning ? getCachedAddress() : null));
+  const [settings, setSettings] = useState<VaultSettings>(() =>
+    returning ? (getVaultSettings() ?? DEFAULT_SETTINGS) : DEFAULT_SETTINGS
+  );
   const [payments, setPayments] = useState<Payment[]>([]);
   const [pending, setPending] = useState<PendingWithdrawal | null>(null);
   const [advance, setAdvance] = useState<Advance | null>(null);
@@ -203,7 +209,8 @@ export default function HomeScreen() {
     return () => clearInterval(id);
   }, [activity]);
 
-  useEffect(() => {
+  // Before paint, so the in-progress cards are there on the first frame.
+  useLayoutEffect(() => {
     if (!vault) return;
     setSettings({ keepBps: vault.keepBps, cooldownSeconds: vault.cooldownSeconds });
     setPending(vault.pending && { amountUsdc: vault.pending.amount, requestedAt: vault.pending.requestedAt, releaseAt: vault.pending.releaseAt });
@@ -221,7 +228,10 @@ export default function HomeScreen() {
     setMounted(true);
     setAddress(getCachedAddress());
     setSettings(getVaultSettings() ?? DEFAULT_SETTINGS);
-    refresh();
+    // The mock layer only stands in when no contracts are configured; loading
+    // it next to a real vault made the cards blink out and back in.
+    if (isVaultConfigured()) setNow(Date.now());
+    else refresh();
   }, []);
 
   // Only tick while there's a countdown on screen.
@@ -280,7 +290,7 @@ export default function HomeScreen() {
   ].filter(Boolean) as { icon: React.ReactNode; title: string; at: number }[];
 
   return (
-    <main className="flex min-h-dvh flex-col duration-300 animate-in fade-in">
+    <main className={cn("flex min-h-dvh flex-col", !returning && "duration-300 animate-in fade-in")}>
       {/* ── Hero ─────────────────────────────────────────────── */}
       <section
         className="relative overflow-hidden rounded-b-[32px] px-5 pt-[calc(env(safe-area-inset-top)+18px)] pb-7 text-white shadow-float ring-1 ring-white/[0.07]"

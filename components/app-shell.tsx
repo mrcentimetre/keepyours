@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
+import { markHydrated } from "@/lib/hydrated";
 import BottomNav from "./bottom-nav";
 
 // Only the four tab-bar screens get the nav — not the install gate, wallet
@@ -20,6 +21,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   // Signed out (no wallet on this phone): the tab screens have nothing to
   // show, so back to the sign-in gate — e.g. pressing Back after Sign out.
+  // The shell mounts once per session: after this, screens render cached data at once.
+  useEffect(() => markHydrated(), []);
+
   const needsWallet = showNav || SUB_ROUTES.includes(pathname ?? "");
   useEffect(() => {
     if (needsWallet && !getCachedAddress()) router.replace("/app");
