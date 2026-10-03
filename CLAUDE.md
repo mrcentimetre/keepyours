@@ -60,7 +60,7 @@ Why each: `docs/ARCHITECTURE.md`.
 ## Front end decisions (27 Sep 2026)
 
 - **Passkey only for the MVP.** No third party in the signing path. Privy sign-in is a later option, never forced.
-- **Installed PWA on a phone.** Mobile browser tab shows install steps; desktop shows a gate page with a QR code. Keep a small "continue in browser (demo)" link so judges can see it.
+- **Installed PWA on a phone.** Mobile browser tab shows install steps; desktop shows a gate page with a QR code. Installing is required (3 Oct 2026): no visible "continue in browser" link. Judges on a laptop get `/app?demo=1`, shared only in the submission.
 - **The front end is built first, on a mock data layer**, and the contracts are wired in afterwards.
 - **Attach keepyours.xyz to Vercel before anyone creates a passkey.** Passkeys are tied to the domain.
 - **New work happens on `dev`**, product screens under `app/app/`, `main` stays deployed as-is. See `docs/BUILD-PLAN.md`.
