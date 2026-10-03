@@ -11,6 +11,7 @@ import {
 } from "@/lib/zerodev";
 import { setProfileName } from "./use-profile-name";
 import { clearCache } from "@/lib/cache";
+import { unregisterPush } from "@/lib/push";
 
 const HAS_PASSKEY_KEY = "ky_has_passkey";
 const CACHED_ADDRESS_KEY = "ky_wallet_address";
@@ -63,6 +64,7 @@ export function signOut() {
   } catch {}
   forgetWebAuthnKey();
   clearCache();
+  void unregisterPush();
   setProfileName("");
 }
 

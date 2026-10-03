@@ -5,6 +5,7 @@ import type { Address } from "viem";
 import { notificationText, readActivity, type ActivityItem } from "@/lib/activity";
 import { readCache, writeCache } from "@/lib/cache";
 import { haptic } from "@/lib/haptics";
+import { pushActiveFor } from "@/lib/push";
 import { toast } from "sonner";
 
 const POLL_MS = 20_000;
@@ -79,7 +80,9 @@ export function useActivity(owner: string | null, vault: Address | null) {
             haptic();
             toast.success(`+$${i.amount.toFixed(2)} received`, { description: i.detail });
           }
-          await notify(i);
+          // Once push is set up the keeper sends these, even with the app closed;
+          // sending them here too would show every one twice.
+          if (!pushActiveFor(vault)) await notify(i);
         }
         if (next[0]) writeNum(NOTIFIED_KEY, Math.max(notifiedAt, next[0].at));
       }

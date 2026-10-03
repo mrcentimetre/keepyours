@@ -21,6 +21,7 @@ import { useUsdcBalance } from "@/hooks/use-usdc-balance";
 import { useVault } from "@/hooks/use-vault";
 import { useActivity } from "@/hooks/use-activity";
 import { useNotificationPermission } from "@/hooks/use-notification-permission";
+import { registerPush } from "@/lib/push";
 import ActivityList from "./activity-list";
 import InProgressCard, { humanDuration } from "./app/in-progress-card";
 import { AdvanceIcon, CooldownIcon, SplitIcon } from "./waitlist/feature-icons";
@@ -187,6 +188,13 @@ export default function HomeScreen() {
   const [splitting, setSplitting] = useState(false);
   const { items: activity, unread, seenAt, markSeen } = useActivity(address, vault?.address ?? null);
   const { permission, ask } = useNotificationPermission();
+
+  // With notifications allowed, register this phone for push so the keeper
+  // can reach it while the app is closed. Re-run on each open: cheap, idempotent.
+  const vaultAddress = vault?.address ?? null;
+  useEffect(() => {
+    if (vaultAddress && permission === "granted") registerPush(vaultAddress);
+  }, [vaultAddress, permission]);
 
   // Tick "2 min ago" labels while there's live activity on screen.
   useEffect(() => {
