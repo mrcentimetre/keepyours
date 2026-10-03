@@ -290,7 +290,7 @@ export default function HomeScreen() {
   ].filter(Boolean) as { icon: React.ReactNode; title: string; at: number }[];
 
   return (
-    <main className={cn("flex min-h-dvh flex-col", !returning && "duration-300 animate-in fade-in")}>
+    <main className={cn("flex min-h-dvh flex-col bg-background", !returning && "duration-300 animate-in fade-in")}>
       {/* ── Hero ─────────────────────────────────────────────── */}
       <section
         className="relative overflow-hidden rounded-b-[32px] px-5 pt-[calc(env(safe-area-inset-top)+18px)] pb-7 text-white shadow-float ring-1 ring-white/[0.07]"

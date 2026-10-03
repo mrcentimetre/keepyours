@@ -387,17 +387,22 @@ html::before {
   animation: none;
 }
 
+/* iPhone push: the new screen slides in from the right edge OVER the old
+   one, which drifts a little left and dims. Back is the exact reverse, with
+   the leaving screen on top. Screens are opaque (bg-background) so nothing
+   shows through mid-slide. */
 ::view-transition-old(.nav-forward) {
-  animation: 180ms ease-in both ky-vt-fade-out, 340ms cubic-bezier(0.22, 1, 0.36, 1) both ky-vt-to-left;
+  animation: 380ms cubic-bezier(0.32, 0.72, 0, 1) both ky-vt-push-under;
 }
 ::view-transition-new(.nav-forward) {
-  animation: 240ms ease-out 60ms both ky-vt-fade-in, 340ms cubic-bezier(0.22, 1, 0.36, 1) both ky-vt-from-right;
+  animation: 380ms cubic-bezier(0.32, 0.72, 0, 1) both ky-vt-push-in;
 }
 ::view-transition-old(.nav-back) {
-  animation: 180ms ease-in both ky-vt-fade-out, 340ms cubic-bezier(0.22, 1, 0.36, 1) both ky-vt-to-right;
+  z-index: 1; /* the leaving screen slides off on top */
+  animation: 380ms cubic-bezier(0.32, 0.72, 0, 1) both ky-vt-pop-out;
 }
 ::view-transition-new(.nav-back) {
-  animation: 240ms ease-out 60ms both ky-vt-fade-in, 340ms cubic-bezier(0.22, 1, 0.36, 1) both ky-vt-from-left;
+  animation: 380ms cubic-bezier(0.32, 0.72, 0, 1) both ky-vt-pop-under;
 }
 ::view-transition-old(.nav-tab) {
   animation: 140ms ease-out both ky-vt-fade-out;
@@ -408,10 +413,10 @@ html::before {
 
 @keyframes ky-vt-fade-in { from { opacity: 0; } }
 @keyframes ky-vt-fade-out { to { opacity: 0; } }
-@keyframes ky-vt-from-right { from { translate: 48px 0; } }
-@keyframes ky-vt-to-left { to { translate: -48px 0; } }
-@keyframes ky-vt-from-left { from { translate: -48px 0; } }
-@keyframes ky-vt-to-right { to { translate: 48px 0; } }
+@keyframes ky-vt-push-in { from { translate: 100% 0; box-shadow: -12px 0 32px rgb(0 0 0 / 0.25); } to { box-shadow: -12px 0 32px rgb(0 0 0 / 0.25); } }
+@keyframes ky-vt-push-under { to { translate: -28% 0; filter: brightness(0.82); } }
+@keyframes ky-vt-pop-out { to { translate: 100% 0; } }
+@keyframes ky-vt-pop-under { from { translate: -28% 0; filter: brightness(0.82); } }
 
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*),
