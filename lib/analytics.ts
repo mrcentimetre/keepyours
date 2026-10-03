@@ -1,11 +1,12 @@
 // Product analytics for the app (PostHog). Testers stay anonymous: no wallet
 // or vault address, no amounts, no autocapture of on-screen text, no session
 // recording. Events say THAT something happened ("advance taken"), never
-// who or how much. Does nothing until NEXT_PUBLIC_POSTHOG_KEY is set.
+// who or how much. Does nothing until NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN is set.
 
 import posthog from "posthog-js";
 
-const KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY;
+// Set by the Vercel PostHog integration (Production and Preview).
+const KEY = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
 const HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://us.i.posthog.com";
 
 let started = false;
