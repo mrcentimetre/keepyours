@@ -10,6 +10,7 @@ import {
   type PasskeyWallet,
 } from "@/lib/zerodev";
 import { setProfileName } from "./use-profile-name";
+import { clearCache } from "@/lib/cache";
 
 const HAS_PASSKEY_KEY = "ky_has_passkey";
 const CACHED_ADDRESS_KEY = "ky_wallet_address";
@@ -61,6 +62,7 @@ export function signOut() {
     localStorage.setItem(HAS_PASSKEY_KEY, "1");
   } catch {}
   forgetWebAuthnKey();
+  clearCache();
   setProfileName("");
 }
 

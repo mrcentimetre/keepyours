@@ -4,6 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import type { Address } from "viem";
 import { isVaultConfigured, predictVault, readVault, vaultOf, type VaultState } from "@/lib/vault";
 import { autoSplit } from "@/lib/splitter";
+import { readCache, writeCache } from "@/lib/cache";
+
+type Cached = { payTo: Address | null; exists: boolean | null; state: VaultState | null };
 
 const POLL_MS = 15_000;
 
@@ -15,9 +18,21 @@ const POLL_MS = 15_000;
  * then offer a manual split).
  */
 export function useVault(owner: string | null) {
-  const [payTo, setPayTo] = useState<Address | null>(null);
-  const [state, setState] = useState<VaultState | null>(null);
-  const [exists, setExists] = useState<boolean | null>(null);
+  const key = `vault:${owner}`;
+  const cached = owner ? readCache<Cached>(key) : null;
+  const [payTo, setPayTo] = useState<Address | null>(cached?.payTo ?? null);
+  const [state, setState] = useState<VaultState | null>(cached?.state ?? null);
+  const [exists, setExists] = useState<boolean | null>(cached?.exists ?? null);
+
+  // The owner arrives after mount; show its cached vault as soon as it does.
+  useEffect(() => {
+    if (!owner) return;
+    const c = readCache<Cached>(key);
+    if (!c) return;
+    setPayTo((v) => v ?? c.payTo);
+    setState((v) => v ?? c.state);
+    setExists((v) => v ?? c.exists);
+  }, [owner, key]);
   const [splitting, setSplitting] = useState(false);
   const [autoSplitFailed, setAutoSplitFailed] = useState(false);
 
@@ -27,15 +42,19 @@ export function useVault(owner: string | null) {
       const vault = await vaultOf(owner as Address);
       setExists(vault !== null);
       if (vault) {
+        const next = await readVault(vault);
         setPayTo(vault);
-        setState(await readVault(vault));
+        setState(next);
+        writeCache<Cached>(key, { payTo: vault, exists: true, state: next });
       } else {
-        setPayTo(await predictVault(owner as Address));
+        const predicted = await predictVault(owner as Address);
+        setPayTo(predicted);
+        writeCache<Cached>(key, { payTo: predicted, exists: false, state: null });
       }
     } catch {
       // Keep what we had; the next poll tries again.
     }
-  }, [owner]);
+  }, [owner, key]);
 
   useEffect(() => {
     refresh();
