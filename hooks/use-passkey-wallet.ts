@@ -10,6 +10,8 @@ import {
   type PasskeyWallet,
 } from "@/lib/zerodev";
 import { setProfileName } from "./use-profile-name";
+import { plainWalletError } from "@/lib/vault";
+import { reportError } from "@/lib/analytics";
 import { clearCache } from "@/lib/cache";
 import { unregisterPush } from "@/lib/push";
 
@@ -100,7 +102,9 @@ export function usePasskeyWallet() {
       // WebAuthn's own errors (e.g. the user cancels the Face ID/Touch ID
       // prompt) are a NotAllowedError DOMException, not something with a
       // useful `.message` for a stranger — keep it plain either way.
-      setError(e instanceof Error ? e.message : "Something went wrong.");
+      const action = markCreated ? "create" : "unlock";
+      setError(plainWalletError(e, action));
+      reportError(e, action === "create" ? "create_wallet" : "unlock");
     }
   }, []);
 

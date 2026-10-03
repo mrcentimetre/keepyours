@@ -250,12 +250,32 @@ export function maxAdvance(state: VaultState): number {
   return Math.max(0, Math.min(byRule, Math.floor(state.poolLiquidity * 100) / 100));
 }
 
+/** Timeouts and dropped connections, from fetch, viem or the bundler. */
+export function isNetworkError(msg: string): boolean {
+  return /timed out|took too long|Failed to fetch|NetworkError|network request failed|Load failed|ECONNRESET|HTTP request failed/i.test(msg);
+}
+
+/**
+ * For the wallet screen (create / unlock). Never shows the raw error: it can
+ * carry RPC URLs, request bodies and library versions. The full error goes to
+ * error tracking instead.
+ */
+export function plainWalletError(e: unknown, action: "unlock" | "create"): string {
+  const err = e as { message?: string; shortMessage?: string; details?: string; name?: string };
+  const msg = [err?.name, err?.shortMessage, err?.message, err?.details].filter(Boolean).join(" ") || String(e);
+  if (/NotAllowedError|cancel+ed|aborted/i.test(msg)) return "Face ID was cancelled. Try again when you're ready.";
+  if (isNetworkError(msg)) return "Couldn't reach the network. Check your connection and try again.";
+  if (/InvalidStateError|already registered/i.test(msg)) return "This phone already has a Keep Yours passkey. Use Unlock instead.";
+  return action === "unlock" ? "Couldn't unlock right now. Try again in a moment." : "Couldn't create your wallet right now. Try again in a moment.";
+}
+
 /** Turns SDK, bundler and WebAuthn errors into something a person can act on. */
 export function plainTxError(e: unknown): string {
   const err = e as { message?: string; shortMessage?: string; details?: string };
   const msg = [err?.shortMessage, err?.message, err?.details].filter(Boolean).join(" ") || String(e);
   if (msg.includes("DIFFERENT_WALLET")) return "That passkey opens a different wallet than the one on this phone.";
   if (/NotAllowedError|cancel+ed|aborted/i.test(msg)) return "Face ID was cancelled. Nothing happened.";
+  if (isNetworkError(msg)) return "Couldn't reach the network. Check your connection and try again. Nothing changed.";
   // A paymaster refuses to sponsor a transaction that would fail, and that
   // refusal also mentions the paymaster, so only blame fees when the error
   // says sponsorship itself was denied (policy, limit, balance).

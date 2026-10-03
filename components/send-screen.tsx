@@ -107,7 +107,7 @@ export default function SendScreen() {
       setTo("");
       refresh();
     } catch (e) {
-      const msg = e instanceof Error && /different wallet/.test(e.message) ? e.message : plainTxError(e);
+      const msg = plainTxError(e);
       setError(msg);
       track("tx_failed", { action: "send", reason: msg.startsWith("That passkey") ? "different_wallet" : msg });
       reportError(e, "send");
