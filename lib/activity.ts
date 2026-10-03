@@ -56,6 +56,11 @@ export type ActivityItem = {
   at: number; // ms
   tx: Hex;
   detail?: string;
+  /** Payments only: how the split went. */
+  kept?: number;
+  repaid?: number;
+  /** Sends only: who it went to. */
+  to?: Address;
 };
 
 const ev = {
@@ -111,7 +116,14 @@ export async function readActivity(owner: Address, vault: Address): Promise<Acti
     const a = l.args;
     const parts = [`$${usd(a.kept!).toFixed(2)} kept`, `$${usd(a.spent!).toFixed(2)} to spend`];
     if (a.repaid! > BigInt(0)) parts.unshift(`$${usd(a.repaid!).toFixed(2)} repaid`);
-    items.push({ ...base(l), kind: "payment", amount: usd(a.amount!), detail: parts.join(" · ") });
+    items.push({
+      ...base(l),
+      kind: "payment",
+      amount: usd(a.amount!),
+      detail: parts.join(" · "),
+      kept: usd(a.kept!),
+      repaid: usd(a.repaid!),
+    });
   }
   for (const l of advanced) items.push({ ...base(l), kind: "advance", amount: usd(l.args.amount!) });
   for (const l of requested) items.push({ ...base(l), kind: "withdraw-requested", amount: usd(l.args.amount!) });
@@ -134,7 +146,7 @@ export async function readActivity(owner: Address, vault: Address): Promise<Acti
   for (const l of out) {
     if (own.has(l.args.to!.toLowerCase())) continue;
     const to = l.args.to!;
-    items.push({ ...base(l), kind: "sent", amount: usd(l.args.value!), detail: `to ${to.slice(0, 6)}…${to.slice(-4)}` });
+    items.push({ ...base(l), kind: "sent", amount: usd(l.args.value!), detail: `to ${to.slice(0, 6)}…${to.slice(-4)}`, to });
   }
 
   // One timestamp lookup per block, not per event.
