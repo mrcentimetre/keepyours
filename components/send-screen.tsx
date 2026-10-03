@@ -4,7 +4,7 @@ import { reportError, track } from "@/lib/analytics";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { isAddress, isAddressEqual, type Address, type Hex } from "viem";
-import { CircleCheck, ClipboardPaste, ExternalLink, Loader2, Wallet } from "lucide-react";
+import { ChevronLeft, CircleCheck, ClipboardPaste, ExternalLink, Loader2, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import { useUsdcBalance } from "@/hooks/use-usdc-balance";
@@ -146,7 +146,13 @@ export default function SendScreen() {
 
   // ── Entry ───────────────────────────────────────────────────
   return (
-    <Screen className="gap-5">
+    <Screen className="gap-5 pb-[calc(env(safe-area-inset-bottom)+16px)]">
+      <Link
+        href="/app/home"
+        className="-mb-2 -ml-1 inline-flex w-fit items-center gap-0.5 text-[15px] font-semibold text-muted-foreground active:text-foreground"
+      >
+        <ChevronLeft className="size-5" /> Home
+      </Link>
       <ScreenHeader title="Send" subtitle="From your wallet, to any address" />
 
       <Card>
