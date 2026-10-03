@@ -40,6 +40,7 @@ export default function InProgressCard({
   return (
     <Link
       href={href}
+      transitionTypes={["nav-forward"]}
       className="block rounded-[22px] bg-card p-4 shadow-sm ring-1 ring-hairline transition-transform active:scale-[0.99]"
     >
       <div className="flex items-center gap-3.5">

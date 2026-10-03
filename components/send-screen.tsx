@@ -134,7 +134,9 @@ export default function SendScreen() {
         </div>
         <div className="flex flex-col gap-3">
           <Button size="lg" asChild className="w-full">
-            <Link href="/app/home">Done</Link>
+            <Link href="/app/home" transitionTypes={["nav-back"]}>
+              Done
+            </Link>
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setSent(null)} className="self-center">
             Send more
@@ -149,6 +151,7 @@ export default function SendScreen() {
     <Screen className="gap-5 pb-[calc(env(safe-area-inset-bottom)+16px)]">
       <Link
         href="/app/home"
+        transitionTypes={["nav-back"]}
         className="-mb-2 -ml-1 inline-flex w-fit items-center gap-0.5 text-[15px] font-semibold text-muted-foreground active:text-foreground"
       >
         <ChevronLeft className="size-5" /> Home

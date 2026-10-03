@@ -24,7 +24,7 @@ export default function BottomNav() {
     <nav
       aria-label="Main"
       className="fixed inset-x-3 z-30 mx-auto flex max-w-[436px] items-center gap-1 rounded-[24px] bg-dock p-2 shadow-float ring-1 ring-hairline backdrop-blur-xl"
-      style={{ bottom: "calc(env(safe-area-inset-bottom) + 12px)" }}
+      style={{ bottom: "calc(env(safe-area-inset-bottom) + 12px)", viewTransitionName: "bottom-nav" }}
     >
       {TABS.map(({ href, label, Icon }) => {
         const active = pathname === href;
@@ -32,6 +32,7 @@ export default function BottomNav() {
           <Link
             key={href}
             href={href}
+            transitionTypes={["nav-tab"]}
             aria-current={active ? "page" : undefined}
             aria-label={label}
             className={cn(

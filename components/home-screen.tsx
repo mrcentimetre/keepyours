@@ -79,7 +79,7 @@ function HeroAction({
   );
   const className = "group flex flex-col items-center gap-2";
   return href ? (
-    <Link href={href} className={className}>
+    <Link href={href} className={className} transitionTypes={["nav-forward"]}>
       {inner}
     </Link>
   ) : (
