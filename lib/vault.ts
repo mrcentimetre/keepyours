@@ -203,9 +203,20 @@ export function maxAdvance(state: VaultState): number {
 
 /** Turns SDK, bundler and WebAuthn errors into something a person can act on. */
 export function plainTxError(e: unknown): string {
-  const msg = e instanceof Error ? e.message : String(e);
-  if (msg === "DIFFERENT_WALLET") return "That passkey opens a different wallet than the one on this phone.";
-  if (/NotAllowed|cancel|abort/i.test(msg)) return "Face ID was cancelled. Nothing happened.";
-  if (/paymaster|sponsor|policy/i.test(msg)) return "Network fees couldn't be covered right now. Try again in a minute.";
-  return "That didn't go through. Nothing changed. Try again.";
+  const err = e as { message?: string; shortMessage?: string; details?: string };
+  const msg = [err?.shortMessage, err?.message, err?.details].filter(Boolean).join(" ") || String(e);
+  if (msg.includes("DIFFERENT_WALLET")) return "That passkey opens a different wallet than the one on this phone.";
+  if (/NotAllowedError|cancel+ed|aborted/i.test(msg)) return "Face ID was cancelled. Nothing happened.";
+  // A paymaster refuses to sponsor a transaction that would fail, and that
+  // refusal also mentions the paymaster, so only blame fees when the error
+  // says sponsorship itself was denied (policy, limit, balance).
+  if (/(policy|spending limit|rate limit|insufficient.*(deposit|balance).*paymaster|paymaster.*(deposit|balance))/i.test(msg)) {
+    return "Network fees couldn't be covered right now. Try again in a minute.";
+  }
+  if (/transfer amount exceeds balance|insufficient funds|ERC20InsufficientBalance/i.test(msg)) {
+    return "Not enough USDC in your wallet for that.";
+  }
+  // ERC-4337 errors carry a short code (AA21, AA23, ...): show it so a tester's screenshot tells us which.
+  const code = msg.match(/\bAA\d\d\b/)?.[0];
+  return `That didn't go through. Nothing changed. Try again.${code ? ` (${code})` : ""}`;
 }

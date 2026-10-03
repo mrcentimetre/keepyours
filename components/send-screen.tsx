@@ -10,6 +10,7 @@ import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import { useUsdcBalance } from "@/hooks/use-usdc-balance";
 import { loginPasskeyWallet } from "@/lib/zerodev";
 import { USDC_ADDRESS, explorerTx, usdcTransferData } from "@/lib/usdc";
+import { plainTxError } from "@/lib/vault";
 import { formatUsdc, shorten } from "@/lib/format";
 import AmountKeypad, { AmountDisplay, AmountPresets, type AmountPreset } from "./amount-keypad";
 import { Screen, ScreenHeader, Money } from "./app/screen";
@@ -31,15 +32,6 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
       <span className="text-right font-medium">{children}</span>
     </div>
   );
-}
-
-// Turns SDK and WebAuthn errors into something a person can act on.
-function plainError(e: unknown): string {
-  const msg = e instanceof Error ? e.message : String(e);
-  if (/NotAllowed|cancel|abort/i.test(msg)) return "Face ID was cancelled. Nothing was sent.";
-  if (/insufficient|exceeds balance/i.test(msg)) return "Not enough USDC in your wallet.";
-  if (/paymaster|sponsor|policy/i.test(msg)) return "Network fees couldn't be covered right now. Try again in a minute.";
-  return "Couldn't send. Nothing left your wallet. Try again.";
 }
 
 export default function SendScreen() {
@@ -110,7 +102,7 @@ export default function SendScreen() {
       setTo("");
       refresh();
     } catch (e) {
-      const msg = e instanceof Error && /different wallet/.test(e.message) ? e.message : plainError(e);
+      const msg = e instanceof Error && /different wallet/.test(e.message) ? e.message : plainTxError(e);
       setError(msg);
       track("tx_failed", { action: "send", reason: msg.startsWith("That passkey") ? "different_wallet" : msg });
       reportError(e, "send");
