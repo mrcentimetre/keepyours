@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Address } from "viem";
-import { readActivity, type ActivityItem } from "@/lib/activity";
+import { notificationText, readActivity, type ActivityItem } from "@/lib/activity";
 import { readCache, writeCache } from "@/lib/cache";
 import { haptic } from "@/lib/haptics";
 import { toast } from "sonner";
@@ -11,7 +11,9 @@ const POLL_MS = 20_000;
 const SEEN_KEY = "ky_activity_seen_at"; // newest item the person has looked at
 const NOTIFIED_KEY = "ky_activity_notified_at"; // newest item a phone notification went out for
 
-const INCOMING = new Set(["payment", "received"]);
+// Things that happen TO you rather than BY you in this app: these also get a
+// toast while the app is open. Everything gets a phone notification.
+const FROM_OUTSIDE = new Set(["payment", "received", "settled"]);
 
 function readNum(key: string): number {
   try {
@@ -27,13 +29,14 @@ function writeNum(key: string, n: number) {
   } catch {}
 }
 
-/** A phone notification for money that just arrived, if the person allowed them. */
-async function notifyIncoming(item: ActivityItem) {
+/** A phone notification for any on-chain event on this vault, if the person allowed them. */
+async function notify(item: ActivityItem) {
   if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
   try {
     const reg = await navigator.serviceWorker?.getRegistration();
-    await reg?.showNotification(`$${item.amount.toFixed(2)} received`, {
-      body: item.detail ?? "Tap to see it in Keep Yours.",
+    const { title, body } = notificationText(item);
+    await reg?.showNotification(title, {
+      body,
       icon: "/icon-192.png",
       tag: item.id,
     });
@@ -66,16 +69,17 @@ export function useActivity(owner: string | null, vault: Address | null) {
       if (first.current && notifiedAt === 0) {
         writeNum(NOTIFIED_KEY, next[0]?.at ?? Date.now());
       } else {
-        const fresh = next.filter((i) => i.at > notifiedAt && INCOMING.has(i.kind));
+        // Oldest first, so notifications stack in the order things happened.
+        const fresh = next.filter((i) => i.at > notifiedAt).reverse();
         for (const i of fresh) {
           // In the app: a toast, plus a haptic where the phone allows one
           // without a tap (Android always; iPhone usually not). Outside the
           // app, the phone notification is what buzzes.
-          if (document.visibilityState === "visible") {
+          if (document.visibilityState === "visible" && FROM_OUTSIDE.has(i.kind)) {
             haptic();
             toast.success(`+$${i.amount.toFixed(2)} received`, { description: i.detail });
           }
-          await notifyIncoming(i);
+          await notify(i);
         }
         if (next[0]) writeNum(NOTIFIED_KEY, Math.max(notifiedAt, next[0].at));
       }

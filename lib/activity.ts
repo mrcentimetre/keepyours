@@ -24,6 +24,31 @@ export type ActivityKind =
   | "withdraw-cancelled"
   | "withdrawn";
 
+/** What a phone notification says for each kind of on-chain event. */
+export function notificationText(i: { kind: ActivityKind; amount: number; detail?: string }): { title: string; body: string } {
+  const $ = `$${i.amount.toFixed(2)}`;
+  switch (i.kind) {
+    case "payment":
+      return { title: `${$} received`, body: i.detail ?? "Split into spend and keep." };
+    case "received":
+      return { title: `${$} received in your wallet`, body: "Sent straight to your wallet, so it wasn't split." };
+    case "sent":
+      return { title: `${$} sent`, body: i.detail ? `Sent ${i.detail}.` : "Sent from your wallet." };
+    case "advance":
+      return { title: `${$} advance taken`, body: "It's in your wallet. Your next payment repays it first." };
+    case "repaid":
+      return { title: `Advance repaid · ${$}`, body: i.detail ?? "Your savings are free again." };
+    case "settled":
+      return { title: `Advance settled · ${$}`, body: "Taken from your savings after day 90." };
+    case "withdraw-requested":
+      return { title: `Withdrawal of ${$} started`, body: "If this wasn't you, open Keep Yours and cancel it." };
+    case "withdraw-cancelled":
+      return { title: `Withdrawal of ${$} cancelled`, body: "Your savings stay put." };
+    case "withdrawn":
+      return { title: `${$} withdrawn`, body: "It's in your wallet now." };
+  }
+}
+
 export type ActivityItem = {
   id: string;
   kind: ActivityKind;
