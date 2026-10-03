@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Copy, Share2, Check, Loader2 } from "lucide-react";
+import { Copy, Share2, Check } from "lucide-react";
+import { BusyCoin } from "./app/busy-coin";
 import { toast } from "sonner";
 import { Sheet, SheetContent } from "./ui/sheet";
 import { Button } from "./ui/button";
@@ -77,7 +78,7 @@ export default function GetPaidSheet({
         ) : (
           // Never fall back to the wallet address: money sent there skips the split.
           <p className="flex items-center justify-center gap-2 py-6 text-center text-[14px] text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" /> Getting your address…
+            <BusyCoin className="size-4" /> Getting your address…
           </p>
         )}
       </SheetContent>

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Fingerprint, KeyRound, Loader2, ShieldCheck, Sparkles, TriangleAlert } from "lucide-react";
+import { Fingerprint, KeyRound, ShieldCheck, Sparkles, TriangleAlert } from "lucide-react";
+import { BusyCoin } from "./app/busy-coin";
 import { usePasskeyWallet, hasExistingPasskey } from "@/hooks/use-passkey-wallet";
 import type { Address } from "viem";
 import { hasCompletedSetup } from "@/lib/vault-settings";
@@ -137,7 +138,7 @@ export default function WalletGate() {
           </p>
         )}
         <Button size="lg" onClick={returning ? unlock : create} disabled={busy} className="w-full">
-          {busy ? <Loader2 className="animate-spin" /> : <Fingerprint />}
+          {busy ? <BusyCoin /> : <Fingerprint />}
           {busy ? "Waiting for you…" : returning ? "Unlock" : "Create passkey"}
         </Button>
         {!returning && (

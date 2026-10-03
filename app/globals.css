@@ -426,6 +426,24 @@ html::before {
   }
 }
 
+/* The "working on it" coin (components/app/busy-coin.tsx). */
+.ky-busy-coin {
+  transform-origin: center;
+  animation: ky-coin-flip 0.9s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@keyframes ky-coin-flip {
+  0%, 100% { transform: scaleX(1); }
+  50% { transform: scaleX(0.12); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ky-busy-coin {
+    animation: ky-coin-pulse 1.4s ease-in-out infinite;
+  }
+}
+@keyframes ky-coin-pulse {
+  50% { opacity: 0.45; }
+}
+
 /* In lists the icons stand still; only the in-progress cards move. */
 .ic-still * {
   animation: none !important;

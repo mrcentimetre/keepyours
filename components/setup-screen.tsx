@@ -4,7 +4,8 @@ import { reportError, track } from "@/lib/analytics";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Address } from "viem";
-import { CircleCheck, Loader2 } from "lucide-react";
+import { CircleCheck } from "lucide-react";
+import { BusyCoin } from "./app/busy-coin";
 import {
   DEFAULT_SETTINGS,
   COOLDOWN_PRESETS,
@@ -152,7 +153,7 @@ export default function SetupScreen() {
           </p>
         )}
         <Button size="lg" onClick={confirm} disabled={busy} className="w-full">
-          {busy && <Loader2 className="animate-spin" />}
+          {busy && <BusyCoin />}
           {busy ? "Creating your vault…" : "Create my vault"}
         </Button>
       </div>

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import type { Address } from "viem";
-import { CircleCheck, Loader2, ShieldCheck, Timer } from "lucide-react";
+import { CircleCheck, ShieldCheck, Timer } from "lucide-react";
+import { BusyCoin } from "./app/busy-coin";
 import { toast } from "sonner";
 import { COOLDOWN_PRESETS } from "@/lib/vault-settings";
 import { isWeakerChange, plainTxError, proposeSettingsCall, sendWithPasskey, type VaultState } from "@/lib/vault";
@@ -156,7 +157,7 @@ export default function VaultSettingsSheet({
             </Button>
           ) : busy ? (
             <Button size="lg" disabled className="w-full">
-              <Loader2 className="animate-spin" />
+              <BusyCoin />
               Saving…
             </Button>
           ) : (
