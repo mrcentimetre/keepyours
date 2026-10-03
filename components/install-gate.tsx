@@ -9,7 +9,10 @@ import OnboardingCarousel, { ONBOARDED_KEY } from "./onboarding-carousel";
 import WalletGate from "./wallet-gate";
 import InAppBrowserNotice from "./in-app-browser-notice";
 
-const BYPASS_KEY = "ky_continue_in_browser";
+// Installing is required. The only way past the gate in a browser tab is
+// /app?demo=1, shared with hackathon judges on a laptop; never shown in the UI.
+// (A new key on purpose: the old visible "continue in browser" choice is ignored.)
+const BYPASS_KEY = "ky_demo_bypass";
 const IN_APP_DISMISSED_KEY = "ky_in_app_warning_dismissed";
 
 // Best-effort only: Telegram's own tracker (github.com/TelegramMessenger/
@@ -47,14 +50,6 @@ function detectStandalone(): boolean {
   return (
     window.matchMedia?.("(display-mode: standalone)").matches ||
     (window.navigator as Navigator & { standalone?: boolean }).standalone === true // iOS Safari
-  );
-}
-
-function ContinueInBrowser({ onContinue }: { onContinue: () => void }) {
-  return (
-    <Button variant="ghost" size="sm" onClick={onContinue} className="self-center">
-      Continue in browser (demo)
-    </Button>
   );
 }
 
@@ -162,6 +157,9 @@ export default function InstallGate() {
     setInAppBrowser(detectInAppBrowser());
     setUrl(window.location.origin + "/app");
     try {
+      if (new URLSearchParams(window.location.search).get("demo") === "1") {
+        localStorage.setItem(BYPASS_KEY, "1");
+      }
       setBypassed(localStorage.getItem(BYPASS_KEY) === "1");
       setOnboarded(localStorage.getItem(ONBOARDED_KEY) === "1");
       setInAppDismissed(localStorage.getItem(IN_APP_DISMISSED_KEY) === "1");
@@ -176,15 +174,6 @@ export default function InstallGate() {
     window.addEventListener("beforeinstallprompt", onPrompt);
     return () => window.removeEventListener("beforeinstallprompt", onPrompt);
   }, []);
-
-  function continueInBrowser() {
-    try {
-      localStorage.setItem(BYPASS_KEY, "1");
-    } catch {
-      // fine without persistence; just won't stick next visit
-    }
-    setBypassed(true);
-  }
 
   function finishOnboarding() {
     try {
@@ -242,7 +231,6 @@ export default function InstallGate() {
         {platform === "other-mobile" && <OtherMobileSteps />}
         {platform === "desktop" && <DesktopGate url={url} />}
       </div>
-      <ContinueInBrowser onContinue={continueInBrowser} />
     </FlowScreen>
   );
 }
