@@ -20,7 +20,8 @@ import {
 } from "@/lib/vault";
 import { reportError, track } from "@/lib/analytics";
 import VaultSettingsSheet from "./vault-settings-sheet";
-import { humanDuration } from "./app/in-progress-card";
+import InProgressCard, { humanDuration } from "./app/in-progress-card";
+import { CooldownIcon } from "./waitlist/feature-icons";
 import { Button } from "./ui/button";
 import { getVaultSettings, DEFAULT_SETTINGS, type VaultSettings } from "@/lib/vault-settings";
 import { formatCooldown, shorten } from "@/lib/format";
@@ -158,25 +159,19 @@ export default function SettingsScreen() {
           const p = vault.pendingSettings;
           const ready = now >= p.applyAt;
           const keep = Math.round(p.keepBps / 100);
+          // A waiting change always waits the cooldown in force when it was asked for.
+          const total = vault.cooldownSeconds * 1000;
           return (
-            <section className="rounded-[22px] bg-card p-4 shadow-sm ring-1 ring-hairline">
-              <div className="flex items-start gap-3">
-                <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-warning/15 text-warning">
-                  <Timer className="size-5" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[14px] font-semibold">{ready ? "Change ready to apply" : "Change waiting"}</p>
-                  <p className="text-[13px] text-muted-foreground">
-                    Spend {100 - keep}% · Keep {keep}% · {formatCooldown(p.cooldownSeconds)} waiting period
-                  </p>
-                  {!ready && (
-                    <p className="mt-1 text-[13px] font-semibold text-warning tabular-nums">
-                      Applies in {humanDuration(p.applyAt - now)}
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-2">
+            <InProgressCard
+              Icon={CooldownIcon}
+              label={`Settings change · ${formatCooldown(p.cooldownSeconds)} waiting period`}
+              headline={`Spend ${100 - keep}% · Keep ${keep}%`}
+              status={ready ? "Ready" : humanDuration(p.applyAt - now)}
+              sub={ready ? "Apply when you like" : "until it can apply"}
+              tone={ready ? "primary" : "warning"}
+              progress={total > 0 ? 1 - (p.applyAt - now) / total : 1}
+            >
+              <div className="grid grid-cols-2 gap-2">
                 <Button variant="secondary" size="sm" disabled={busy !== null} onClick={() => runPending("cancel")}>
                   {busy === "cancel" && <BusyCoin />}
                   Cancel change
@@ -186,7 +181,7 @@ export default function SettingsScreen() {
                   {ready ? "Apply now" : "Not yet"}
                 </Button>
               </div>
-            </section>
+            </InProgressCard>
           );
         })()}
 
