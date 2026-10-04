@@ -14,6 +14,7 @@ import { plainWalletError } from "@/lib/vault";
 import { reportError } from "@/lib/analytics";
 import { clearCache } from "@/lib/cache";
 import { unregisterPush } from "@/lib/push";
+import { clearAway } from "@/lib/auto-lock";
 
 const HAS_PASSKEY_KEY = "ky_has_passkey";
 const CACHED_ADDRESS_KEY = "ky_wallet_address";
@@ -84,6 +85,7 @@ export function usePasskeyWallet() {
     setError(null);
     try {
       const result = await fn();
+      clearAway(); // just passed Face ID: the auto-lock shouldn't ask again on Home
       setWallet(result);
       setStatus("ready");
       setJustCreated(markCreated);

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import { markHydrated } from "@/lib/hydrated";
 import BottomNav from "./bottom-nav";
+import AppLock from "./app-lock";
 
 // Only the four tab-bar screens get the nav — not the install gate, wallet
 // gate, or setup, which are one-time/gated flows that shouldn't look like
@@ -41,6 +42,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         {children}
       </div>
       {showNav && <BottomNav />}
+      {needsWallet && <AppLock />}
     </>
   );
 }

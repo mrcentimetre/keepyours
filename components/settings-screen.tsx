@@ -4,9 +4,10 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import { isHydrated } from "@/lib/hydrated";
 import type { Address } from "viem";
 import { toast } from "sonner";
-import { ChevronRight, Fingerprint, Globe, Moon, PieChart, Send, ShieldAlert, Smartphone, Sun, Timer, Wallet } from "lucide-react";
+import { ChevronRight, Fingerprint, Globe, Lock, Moon, PieChart, Send, ShieldAlert, Smartphone, Sun, Timer, Wallet } from "lucide-react";
 import { BusyCoin } from "./app/busy-coin";
 import { cn } from "@/lib/utils";
+import { AUTO_LOCK_OPTIONS, autoLockLabel, getAutoLock, setAutoLock, type AutoLock } from "@/lib/auto-lock";
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from "@/lib/theme";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import { useProfileName } from "@/hooks/use-profile-name";
@@ -82,6 +83,7 @@ export default function SettingsScreen() {
   const [settings, setSettings] = useState<VaultSettings>(DEFAULT_SETTINGS);
   const [profileOpen, setProfileOpen] = useState(false);
   const [theme, setTheme] = useState<ThemeChoice>("dark");
+  const [autoLock, setAutoLockState] = useState<AutoLock>(60);
   const name = useProfileName();
   // Settings and the shown address come from the vault once it exists.
   const { payTo, state: vault, refresh: refreshVault } = useVault(address);
@@ -125,6 +127,7 @@ export default function SettingsScreen() {
   useEffect(() => {
     setMounted(true);
     setTheme(getThemeChoice());
+    setAutoLockState(getAutoLock());
     setAddress(getCachedAddress());
     setSettings(getVaultSettings() ?? DEFAULT_SETTINGS);
   }, []);
@@ -302,7 +305,35 @@ export default function SettingsScreen() {
         </Group>
       )}
 
-      <Group label="Security">
+      <Group label="Security" note="Locks the app when you've been away this long. Unlock with Face ID or your fingerprint.">
+        {/* A native picker under a normal row: the phone's own wheel or list, nothing custom to get wrong. */}
+        <label className="relative block active:bg-surface-2">
+          <Row
+            icon={<Lock className="size-[18px]" />}
+            label="Auto-lock"
+            value={
+              <span className="inline-flex items-center gap-1">
+                {autoLockLabel(autoLock)} <ChevronRight className="size-4" />
+              </span>
+            }
+          />
+          <select
+            aria-label="Auto-lock"
+            value={autoLock}
+            onChange={(e) => {
+              const next = Number(e.target.value) as AutoLock;
+              setAutoLock(next);
+              setAutoLockState(next);
+            }}
+            className="absolute inset-0 size-full cursor-pointer opacity-0"
+          >
+            {AUTO_LOCK_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
         <Row icon={<Fingerprint className="size-[18px]" />} label="Sign-in" value="Passkey on this device" />
         <Row icon={<Wallet className="size-[18px]" />} label="Custody" value="Only you can move funds" />
       </Group>

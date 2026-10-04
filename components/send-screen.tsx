@@ -10,9 +10,8 @@ import { BusyCoin } from "./app/busy-coin";
 import { toast } from "sonner";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import { useUsdcBalance } from "@/hooks/use-usdc-balance";
-import { loginPasskeyWallet } from "@/lib/zerodev";
 import { USDC_ADDRESS, explorerTx, usdcTransferData } from "@/lib/usdc";
-import { plainTxError } from "@/lib/vault";
+import { plainTxError, sendWithPasskey } from "@/lib/vault";
 import { formatUsdc, shorten } from "@/lib/format";
 import AmountKeypad, { AmountDisplay, AmountPresets, type AmountPreset } from "./amount-keypad";
 import { Screen, ScreenHeader, Money } from "./app/screen";
@@ -89,16 +88,9 @@ export default function SendScreen() {
     setError(null);
     try {
       // Face ID prompt. A live signer is only ever held for this one send.
-      const wallet = await loginPasskeyWallet("Keep Yours");
-      if (address && !isAddressEqual(wallet.address, address as Address)) {
-        throw new Error("That passkey opens a different wallet than the one on this phone.");
-      }
-      const hash = await wallet.kernelClient.sendTransaction({
-        account: wallet.kernelClient.account!,
-        chain: wallet.kernelClient.chain,
+      const hash = await sendWithPasskey(address as Address | null, {
         to: USDC_ADDRESS,
         data: usdcTransferData(toTrimmed as Address, amount),
-        value: BigInt(0),
       });
       setSent({ hash, amount: value, to: toTrimmed });
       track("send_completed");

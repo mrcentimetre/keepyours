@@ -76,6 +76,20 @@ async function confirmPresence(key: WebAuthnKey) {
   });
 }
 
+/** The auto-lock screen: one Face ID on this wallet's passkey (any of this domain's if the key isn't remembered). */
+export async function confirmAppPresence() {
+  const cached = loadWebAuthnKey();
+  if (cached) return confirmPresence(cached);
+  await navigator.credentials.get({
+    publicKey: {
+      challenge: crypto.getRandomValues(new Uint8Array(32)),
+      rpId: window.location.hostname,
+      userVerification: "required",
+      timeout: 60_000,
+    },
+  });
+}
+
 /**
  * Unlock on app open: always one Face ID. With the public key remembered
  * that's a presence check on this passkey; without it, the full login
