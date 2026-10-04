@@ -5,6 +5,7 @@ import { encodeFunctionData, erc20Abi, formatUnits, parseAbi, parseUnits, zeroAd
 import { loginPasskeyWallet, publicClient } from "./zerodev";
 import { USDC_ADDRESS, usdcTransferData } from "./usdc";
 import { saveVaultSettings } from "./vault-settings";
+import { withAutoLockHeld } from "./auto-lock";
 
 export const FACTORY = process.env.NEXT_PUBLIC_FACTORY as Address | undefined;
 export const POOL = process.env.NEXT_PUBLIC_POOL as Address | undefined;
@@ -141,7 +142,11 @@ export type Call = { to: Address; data: Hex };
  * signer only exists for this call. Refuses if the passkey opens a different
  * wallet than the one this phone signed in with.
  */
-export async function sendWithPasskey(expected: Address | null, call: Call | Call[]): Promise<Hex> {
+export function sendWithPasskey(expected: Address | null, call: Call | Call[]): Promise<Hex> {
+  return withAutoLockHeld(() => send(expected, call));
+}
+
+async function send(expected: Address | null, call: Call | Call[]): Promise<Hex> {
   const wallet = await loginPasskeyWallet("Keep Yours");
   if (expected && wallet.address.toLowerCase() !== expected.toLowerCase()) {
     throw new Error("DIFFERENT_WALLET");
@@ -235,10 +240,21 @@ export function advanceCall(vault: Address, amount: string): Call {
   };
 }
 
-/** Repay early from the wallet: pay the vault what is owed, then process(), which repays first. */
-export function repayNowCalls(vault: Address, owed: number): Call[] {
+/**
+ * Repay early from the wallet: pay the vault what is owed, then process(), which repays first.
+ * Reads the debt and the wallet fresh from the chain: the screen's numbers can be
+ * minutes old (a fee tier ticks over, or the keeper settles it from savings), and a
+ * USDC transfer sent after the debt is gone would be split like a payment instead.
+ */
+export async function repayNowCalls(vault: Address, wallet: Address): Promise<Call[]> {
+  const [owed, balance] = await Promise.all([
+    publicClient.readContract({ address: POOL!, abi: poolAbi, functionName: "owedNow", args: [vault] }),
+    publicClient.readContract({ address: USDC_ADDRESS!, abi: erc20Abi, functionName: "balanceOf", args: [wallet] }),
+  ]);
+  if (owed === BigInt(0)) throw new Error("ALREADY_REPAID");
+  if (balance < owed) throw new Error("WALLET_SHORT");
   return [
-    { to: USDC_ADDRESS!, data: usdcTransferData(vault, owed.toFixed(6)) },
+    { to: USDC_ADDRESS!, data: usdcTransferData(vault, formatUnits(owed, 6)) },
     processCall(vault),
   ];
 }
@@ -250,9 +266,20 @@ export function maxAdvance(state: VaultState): number {
   return Math.max(0, Math.min(byRule, Math.floor(state.poolLiquidity * 100) / 100));
 }
 
-/** Timeouts and dropped connections, from fetch, viem or the bundler. */
+/**
+ * Timeouts and dropped connections only. viem says "HTTP request failed" both
+ * when the phone is offline AND when the bundler or paymaster answered with an
+ * error status (a refused transaction), so that phrase alone proves nothing:
+ * an answer with a status means the network was reached.
+ */
 export function isNetworkError(msg: string): boolean {
-  return /timed out|took too long|Failed to fetch|NetworkError|network request failed|Load failed|ECONNRESET|HTTP request failed/i.test(msg);
+  if (/Status:\s*\d{3}/i.test(msg)) return false;
+  return /timed out|took too long|Failed to fetch|NetworkError|network request failed|Load failed|ECONNRESET|ERR_INTERNET_DISCONNECTED/i.test(msg);
+}
+
+/** A short code for a tester's screenshot: the ERC-4337 code (AA21, ...) or the HTTP status. */
+function errorCode(msg: string): string | undefined {
+  return msg.match(/\bAA\d\d\b/)?.[0] ?? msg.match(/Status:\s*(\d{3})/i)?.[1]?.replace(/^/, "HTTP ");
 }
 
 /**
@@ -274,6 +301,8 @@ export function plainTxError(e: unknown): string {
   const err = e as { message?: string; shortMessage?: string; details?: string };
   const msg = [err?.shortMessage, err?.message, err?.details].filter(Boolean).join(" ") || String(e);
   if (msg.includes("DIFFERENT_WALLET")) return "That passkey opens a different wallet than the one on this phone.";
+  if (msg.includes("ALREADY_REPAID")) return "This advance is already repaid. Nothing was sent.";
+  if (msg.includes("WALLET_SHORT")) return "Not enough USDC in your wallet to repay it all. It will come out of your next payment instead.";
   if (/NotAllowedError|cancel+ed|aborted/i.test(msg)) return "Face ID was cancelled. Nothing happened.";
   if (isNetworkError(msg)) return "Couldn't reach the network. Check your connection and try again. Nothing changed.";
   // A paymaster refuses to sponsor a transaction that would fail, and that
@@ -285,7 +314,9 @@ export function plainTxError(e: unknown): string {
   if (/transfer amount exceeds balance|insufficient funds|ERC20InsufficientBalance/i.test(msg)) {
     return "Not enough USDC in your wallet for that.";
   }
-  // ERC-4337 errors carry a short code (AA21, AA23, ...): show it so a tester's screenshot tells us which.
-  const code = msg.match(/\bAA\d\d\b/)?.[0];
+  if (/reverted|execution reverted|simulation/i.test(msg) && !/AA\d\d/.test(msg)) {
+    return "The network turned this down, so nothing was sent. Try again in a moment.";
+  }
+  const code = errorCode(msg);
   return `That didn't go through. Nothing changed. Try again.${code ? ` (${code})` : ""}`;
 }

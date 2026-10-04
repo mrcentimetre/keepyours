@@ -120,10 +120,10 @@ export default function AdvanceScreen() {
     setNow(Date.now());
   }, [vault]);
 
-  async function run(call: Call | Call[]): Promise<boolean> {
+  async function run(call: Call | Call[] | (() => Promise<Call[]>)): Promise<boolean> {
     setBusy(true);
     try {
-      await sendWithPasskey(owner as Address, call);
+      await sendWithPasskey(owner as Address, typeof call === "function" ? await call() : call);
       await refreshVault();
       return true;
     } catch (e) {
@@ -196,7 +196,7 @@ export default function AdvanceScreen() {
 
   async function repay() {
     if (vault?.advance) {
-      if (await run(repayNowCalls(vault.address, vault.advance.owedNow))) {
+      if (await run(() => repayNowCalls(vault.address, owner as Address))) {
         toast.success("Advance repaid");
         track("advance_repaid");
       }
