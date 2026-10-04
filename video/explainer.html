@@ -1,0 +1,407 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Keep Yours explainer</title>
+<!--
+  A 1080x1920 explainer, driven by one function: render(t), t in seconds.
+  Open in a browser to preview (it plays itself), or run render.mjs to
+  capture every frame and encode an MP4.
+-->
+<link href="fonts/fonts.css" rel="stylesheet">
+<style>
+:root{
+  --night:#060E0A;--card:#12211A;--green:#16B862;--green-deep:#0B7A41;--mint:#62E6A0;
+  --amber:#F4B545;--red:#FF7070;--muted-d:#8CA497;--ink-d:#EAF5EF;
+  --paper:#EEF6F1;--ink:#08150F;--ink-2:#2C4A3B;--muted:#5E7A6C;--line:rgba(11,63,38,.14);
+  --display:"Bricolage Grotesque",system-ui,sans-serif;--sans:"IBM Plex Sans",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:#000}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;font-family:var(--sans);transform-origin:0 0}
+.layer{position:absolute;inset:0}
+.abs{position:absolute}
+
+/* progress bars */
+#bars{position:absolute;left:48px;right:48px;top:36px;display:flex;gap:10px;z-index:20}
+#bars i{flex:1;height:6px;border-radius:3px;background:rgba(127,150,138,.28);overflow:hidden;display:block}
+#bars b{display:block;height:100%;width:0;border-radius:3px}
+
+/* ---------- intro / outro (dark) ---------- */
+.dark{background:radial-gradient(900px 700px at 80% 12%,rgba(98,230,160,.20),transparent 60%),radial-gradient(800px 800px at 0% 100%,rgba(22,184,98,.16),transparent 60%),var(--night);color:var(--ink-d)}
+.ring{position:absolute;border:2px dashed rgba(98,230,160,.16);border-radius:50%}
+.brand{display:flex;align-items:center;gap:22px}
+.brand img{width:96px;height:96px}
+.brand span{font-family:var(--display);font-weight:700;font-size:54px;letter-spacing:-.02em}
+.eyebrow{font-family:var(--sans);font-weight:600;font-size:26px;letter-spacing:.14em;text-transform:uppercase}
+.h1{font-family:var(--display);font-weight:800;letter-spacing:-.04em;line-height:.96;font-size:150px;margin:0}
+.grad{background:linear-gradient(100deg,var(--green) 5%,var(--mint) 95%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:40px;line-height:1.42;color:var(--muted-d);max-width:900px}
+.chips{display:flex;gap:18px}
+.chipd{display:flex;align-items:center;gap:14px;padding:16px 26px;border-radius:999px;background:var(--card);border:1px solid rgba(98,230,160,.18);font-weight:600;font-size:32px;color:var(--ink-d)}
+.usdc{width:38px;height:38px;border-radius:50%;background:#2775CA;color:#fff;display:grid;place-items:center;font-family:var(--display);font-weight:800;font-size:22px}
+
+/* ---------- diagram (light) ---------- */
+#diagram{background:radial-gradient(900px 700px at 100% 0%,rgba(98,230,160,.28),transparent 60%),radial-gradient(700px 700px at 0% 100%,rgba(22,184,98,.12),transparent 60%),var(--paper);color:var(--ink)}
+.hdr{position:absolute;left:56px;right:56px;top:84px;display:flex;align-items:center;justify-content:space-between}
+.hdr .brand img{width:64px;height:64px}
+.hdr .brand span{font-size:40px}
+.hdr small{font-size:26px;color:var(--muted);font-weight:500}
+.step{position:absolute;left:56px;right:56px;top:220px}
+.step .eyebrow{color:var(--green-deep);font-size:24px}
+.step h2{font-family:var(--display);font-weight:700;font-size:62px;letter-spacing:-.03em;line-height:1.02;margin:14px 0 0}
+.cap{position:absolute;left:56px;right:56px;top:1610px;font-size:38px;line-height:1.42;color:var(--ink-2)}
+
+svg#wires{position:absolute;inset:0;width:1080px;height:1920px;overflow:visible}
+.wire{fill:none;stroke:rgba(11,63,38,.18);stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
+
+.node{position:absolute;width:124px;height:124px;margin:-62px 0 0 -62px;border-radius:50%;background:#fff;border:3px solid rgba(11,63,38,.12);display:grid;place-items:center;box-shadow:0 10px 30px -14px rgba(8,45,28,.35)}
+.node svg{width:56px;height:56px;stroke:var(--ink-2);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.lbl{position:absolute;transform:translateX(-50%);text-align:center;white-space:nowrap;font-weight:600;font-size:28px;color:var(--ink)}
+.lbl em{display:block;font-style:normal;font-family:var(--mono);font-weight:500;font-size:28px;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums}
+
+#vault{position:absolute;left:465px;top:645px;width:150px;height:150px;border-radius:38px;background:var(--night);display:grid;place-items:center;box-shadow:0 18px 40px -16px rgba(8,45,28,.6)}
+#vault img{width:92px;height:92px}
+
+/* the savings tank */
+.tank{position:absolute;border-radius:34px;background:rgba(255,255,255,.75);border:4px solid rgba(11,63,38,.14);overflow:hidden;box-shadow:inset 0 2px 6px rgba(8,45,28,.06)}
+.liquid{position:absolute;left:0;right:0;bottom:0}
+.liquid::before{content:"";position:absolute;left:-10%;right:-10%;top:-14px;height:28px;border-radius:50%;background:inherit}
+#saveLiquid{background:linear-gradient(180deg,#3BD484,var(--green))}
+#poolLiquid{background:linear-gradient(180deg,#8FEFBC,#41C983)}
+.capline{position:absolute;left:0;right:0;border-top:3px dashed rgba(11,63,38,.35)}
+.capline span{position:absolute;right:10px;top:-38px;font-family:var(--mono);font-size:22px;color:var(--muted)}
+#lock{position:absolute;inset:0;display:grid;place-items:center;background:repeating-linear-gradient(-45deg,rgba(6,14,10,.10) 0 14px,transparent 14px 28px)}
+#lock div{display:flex;white-space:nowrap;align-items:center;gap:10px;background:var(--night);color:var(--ink-d);font-weight:600;font-size:22px;padding:10px 16px;border-radius:999px}
+#lock svg{width:26px;height:26px;stroke:var(--mint);fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+
+/* the status card above the vault */
+.card{position:absolute;left:540px;top:430px;transform:translateX(-50%);min-width:520px;padding:22px 30px;border-radius:26px;background:#fff;border:2px solid rgba(11,63,38,.08);box-shadow:0 20px 50px -22px rgba(8,45,28,.45);white-space:nowrap}
+.card .k{font-size:22px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.card .v{font-family:var(--mono);font-weight:600;font-size:46px;margin-top:6px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.card .pill{position:absolute;right:22px;top:20px;font-size:22px;font-weight:600;padding:6px 14px;border-radius:999px;background:rgba(22,184,98,.14);color:var(--green-deep)}
+.card.amber{border-color:var(--amber);background:#FFF8EA}
+.card.amber .k{color:#9A6A10}
+.card.amber .pill{background:rgba(244,181,69,.22);color:#8A5C05}
+
+/* telegram toast */
+#toast{position:absolute;left:56px;right:56px;top:96px;display:flex;gap:22px;align-items:flex-start;padding:26px 28px;border-radius:30px;background:rgba(18,33,26,.96);color:var(--ink-d);box-shadow:0 30px 60px -24px rgba(0,0,0,.6);z-index:15}
+#toast .ic{flex:none;width:72px;height:72px;border-radius:20px;background:#2AABEE;display:grid;place-items:center}
+#toast .ic svg{width:40px;height:40px;fill:#fff}
+#toast b{display:block;font-size:28px;margin-bottom:6px}
+#toast p{margin:0;font-size:28px;line-height:1.38;color:#C9DCD2}
+#toast p .am{color:var(--amber);font-weight:600}
+
+#cancelBtn{position:absolute;left:540px;top:1470px;transform:translateX(-50%);padding:26px 48px;border-radius:999px;background:linear-gradient(120deg,var(--green),var(--mint));color:#03170C;font-weight:600;font-size:34px;white-space:nowrap;box-shadow:0 18px 30px -14px rgba(22,184,98,.9)}
+#ripple{position:absolute;width:80px;height:80px;margin:-40px 0 0 -40px;border-radius:50%;background:rgba(255,255,255,.7);pointer-events:none}
+#finger{position:absolute;width:86px;height:86px;margin:-43px 0 0 -43px;border-radius:50%;background:rgba(6,14,10,.18);border:4px solid rgba(6,14,10,.35)}
+
+.dot{position:absolute;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%}
+
+/* ---------- outro ---------- */
+.row{display:flex;align-items:center;gap:26px;padding:28px 30px;border-radius:28px;background:var(--card);border:1px solid rgba(98,230,160,.12)}
+.row .ck{flex:none;width:58px;height:58px;border-radius:50%;background:var(--green);display:grid;place-items:center}
+.row .ck svg{width:30px;height:30px;stroke:#03170C;fill:none;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+.row b{display:block;font-size:36px;font-weight:600;color:var(--ink-d)}
+.row span{display:block;font-size:28px;color:var(--muted-d);margin-top:4px}
+.cta{display:flex;align-items:center;gap:30px}
+.cta .pillw{display:flex;align-items:center;gap:16px;padding:18px 34px 18px 22px;border-radius:999px;background:#fff}
+.cta .pillw img{width:64px;height:64px}
+.cta .pillw span{font-family:var(--display);font-weight:700;font-size:40px;color:var(--ink);letter-spacing:-.02em}
+.cta small{display:block;font-size:26px;color:var(--muted-d)}
+.cta strong{display:block;font-size:44px;color:var(--ink-d);font-weight:600;margin-top:2px}
+</style>
+</head>
+<body>
+<div id="stage">
+
+  <!-- ===================== INTRO ===================== -->
+  <section id="intro" class="layer dark">
+    <div class="ring" style="left:-420px;top:380px;width:1900px;height:1900px"></div>
+    <div class="ring" style="left:-180px;top:640px;width:1400px;height:1400px;opacity:.6"></div>
+    <div id="iBrand" class="abs brand" style="left:72px;top:150px"><img src="../public/logo-256.png" alt=""><span>Keep Yours</span></div>
+    <div id="iEye" class="abs eyebrow" style="left:76px;top:700px;color:var(--mint)">For people paid in crypto</div>
+    <h1 class="abs h1" style="left:68px;top:770px">
+      <span id="iH1" style="display:block">Get paid.</span>
+      <span id="iH2" style="display:block" class="grad">Keep yours.</span>
+    </h1>
+    <p id="iSub" class="abs sub" style="left:76px;top:1140px;margin:0">See how every USDC payment turns into spending money and savings that stay saved.</p>
+    <div id="iWorks" class="abs" style="left:76px;top:1440px">
+      <div class="eyebrow" style="font-size:22px;color:var(--muted-d);margin-bottom:20px">Works with</div>
+      <div class="chips">
+        <div class="chipd"><span class="usdc">$</span>USDC</div>
+        <div class="chipd"><img src="../public/arbitrum-logo.svg" alt="" style="width:40px;height:40px">Arbitrum</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== DIAGRAM ===================== -->
+  <section id="diagram" class="layer">
+    <div class="hdr">
+      <div class="brand"><img src="../public/logo-256.png" alt=""><span>Keep Yours</span></div>
+      <small>Savings on Arbitrum</small>
+    </div>
+
+    <div class="step" id="st1"><div class="eyebrow">Step 1 · You get paid</div><h2>A client pays you</h2></div>
+    <div class="step" id="st2"><div class="eyebrow">Step 2 · The 2am moment</div><h2>Savings you can't raid</h2></div>
+    <div class="step" id="st3"><div class="eyebrow">Step 3 · An advance</div><h2>Rent's due. Client's late.</h2></div>
+    <div class="step" id="st4"><div class="eyebrow">Step 4 · Next payment</div><h2>It pays itself back</h2></div>
+
+    <svg id="wires" viewBox="0 0 1080 1920">
+      <path id="wClient" class="wire" d="M232 720 H465"/>
+      <path id="wSpend"  class="wire" d="M615 720 H848"/>
+      <path id="wSave"   class="wire" d="M540 795 V935"/>
+      <path id="wSafe"   class="wire" d="M390 1140 H232"/>
+      <path id="wPool"   class="wire" d="M910 1015 V782"/>
+      <path id="wRepay"  class="wire" d="M615 765 H760 V1150 H825"/>
+      <path id="wSafeHot" d="M390 1140 H232" fill="none" stroke="#F4B545" stroke-width="6" stroke-linecap="round" stroke-dasharray="4 18"/>
+    </svg>
+
+    <!-- nodes -->
+    <div class="node" style="left:170px;top:720px"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></div>
+    <div class="lbl" style="left:170px;top:800px">Client</div>
+
+    <div id="vault"><img src="../public/logo-256.png" alt=""></div>
+    <div class="lbl" style="left:540px;top:600px;font-size:0"></div>
+
+    <div class="node" style="left:910px;top:720px"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 10h18"/><circle cx="16.5" cy="14.5" r="1.2"/></svg></div>
+    <div class="lbl" style="left:910px;top:580px">Spending<em id="spendAmt">$0</em></div>
+
+    <div class="node" style="left:170px;top:1140px"><svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/><path d="M10 20v-5h4v5"/></svg></div>
+    <div class="lbl" style="left:170px;top:1220px">Your safe<br>address</div>
+
+    <div id="saveTank" class="tank" style="left:390px;top:935px;width:300px;height:420px">
+      <div id="saveLiquid" class="liquid"></div>
+      <div class="capline" style="bottom:381px"><span>cap $200</span></div>
+      <div id="lock"><div><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Locked until repaid</div></div>
+    </div>
+    <div class="lbl" style="left:540px;top:1374px">Your savings<em id="saveAmt">$80</em></div>
+
+    <div id="poolTank" class="tank" style="left:825px;top:1015px;width:170px;height:260px;border-radius:28px">
+      <div id="poolLiquid" class="liquid"></div>
+    </div>
+    <div class="lbl" style="left:910px;top:1294px">Advance<br>pool<em id="poolAmt">$50</em></div>
+
+    <div id="dots"></div>
+
+    <!-- status card (one at a time) -->
+    <div class="card" id="c1"><div class="k">Payment from client</div><div class="v">100 USDC</div><div class="pill" id="c1pill">Sent</div></div>
+    <div class="card" id="c2"><div class="k">Your split</div><div class="v">60% spend · 40% keep</div></div>
+    <div class="card" id="c3"><div class="k">2:04 am · Withdraw</div><div class="v">$120 → safe address</div></div>
+    <div class="card amber" id="c4"><div class="k">Waiting period</div><div class="v" id="countdown">72:00:00</div><div class="pill">Unlocks in 72h</div></div>
+    <div class="card" id="c5"><div class="k">Withdrawal cancelled</div><div class="v">Savings untouched</div></div>
+    <div class="card" id="c6"><div class="k">Advance</div><div class="v">$30 to spend</div><div class="pill">Free 30 days</div></div>
+    <div class="card" id="c7"><div class="k">Payment from client</div><div class="v">100 USDC</div><div class="pill">Sent</div></div>
+    <div class="card" id="c8"><div class="k">First, repay the advance</div><div class="v">$30 → pool</div></div>
+    <div class="card" id="c9"><div class="k">Then split the rest</div><div class="v">$70 → 42 / 28</div></div>
+
+    <div id="toast">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M21.5 4.3 2.9 11.5c-1.1.4-1.1 1.1-.2 1.4l4.8 1.5 1.8 5.6c.2.6.4.8.9.8.4 0 .6-.2.9-.4l2.3-2.2 4.8 3.5c.9.5 1.5.2 1.7-.8l3.1-14.6c.3-1.3-.5-1.8-1.5-1.4zM8.6 14.1l9.6-6.1c.5-.3.9-.1.5.2l-8 7.2-.3 3.4-1.8-4.7z"/></svg></div>
+      <div><b>Keep Yours · alert</b><p>Withdrawal of $120 requested. <span class="am">It waits 72 hours.</span> Not you, or changed your mind? Cancel any time.</p></div>
+    </div>
+
+    <div id="cancelBtn">Cancel, keep my savings</div>
+    <div id="ripple"></div>
+    <div id="finger"></div>
+
+    <p class="cap" id="cp1">A client pays 100 USDC to your vault on Arbitrum. It splits on arrival: <b>$60 to spend, $40 kept.</b></p>
+    <p class="cap" id="cp2">Taking savings out starts a waiting period, 72 hours by default, and it only pays out to your own safe address. Cancelling is one tap.</p>
+    <p class="cap" id="cp3">Borrow up to half your savings from a separate advance pool, never other people's savings. <b>Free for the first 30 days.</b></p>
+    <p class="cap" id="cp4">The next payment repays the advance first, then splits as usual. Nobody to chase, nothing to remember.</p>
+  </section>
+
+  <!-- ===================== OUTRO ===================== -->
+  <section id="outro" class="layer dark">
+    <div class="ring" style="left:280px;top:-500px;width:1400px;height:1400px"></div>
+    <div id="oBrand" class="abs brand" style="left:72px;top:130px"><img src="../public/logo-256.png" alt=""><span>Keep Yours</span></div>
+    <div id="oEye" class="abs eyebrow" style="left:76px;top:390px;color:var(--mint)">Why Keep Yours</div>
+    <h2 id="oH" class="abs h1" style="left:70px;top:440px;font-size:104px">Get paid.<br><span class="grad">Keep yours.</span></h2>
+    <div class="abs" style="left:56px;right:56px;top:720px;display:grid;gap:22px">
+      <div class="row" id="r1"><div class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><div><b>Split on arrival</b><span>Pick your share once. Every payment follows it.</span></div></div>
+      <div class="row" id="r2"><div class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><div><b>A waiting period on savings</b><span>72 hours by default. Cancel any time.</span></div></div>
+      <div class="row" id="r3"><div class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><div><b>Advance against your own savings</b><span>Free for 30 days, then 1.5%, capped at 3%.</span></div></div>
+      <div class="row" id="r4"><div class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div><div><b>Your own vault, only you can move it</b><span>Passkey sign-in. No seed phrase, no gas token.</span></div></div>
+    </div>
+    <div id="oCta" class="abs cta" style="left:56px;top:1530px">
+      <div class="pillw"><img src="../public/logo-256.png" alt=""><span>Keep Yours</span></div>
+      <div><small>Join the waitlist at</small><strong>keepyours.xyz →</strong></div>
+    </div>
+    <div id="oFine" class="abs" style="left:56px;right:56px;top:1750px;font-size:24px;line-height:1.5;color:var(--muted-d)">Built on Arbitrum. Early and unaudited: deposits are capped at about $200 per vault.</div>
+  </section>
+
+  <div id="bars"><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i></div>
+</div>
+
+<script>
+// ---------- timeline (seconds) ----------
+const SCENES = [[0,4.5],[4.5,11],[11,18],[18,23],[23,28.5],[28.5,35]];
+const DURATION = 35;
+
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const P=(t,a,b)=>clamp((t-a)/(b-a));
+const out3=x=>1-Math.pow(1-x,3);
+const io=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+const lerp=(a,b,x)=>a+(b-a)*x;
+const $=id=>document.getElementById(id);
+
+// fade+rise in at a, out at b (if given)
+function show(el,t,a,b,{dy=40,blur=10,dur=.5}={}){
+  const i=out3(P(t,a,a+dur)), o=b==null?0:P(t,b-.35,b);
+  const v=i*(1-o);
+  el.style.opacity=v;
+  el.style.transform=(el._base||"")+` translateY(${(1-i)*dy - o*20}px)`;
+  el.style.filter=v<1?`blur(${(1-i)*blur + o*6}px)`:"none";
+  el.style.visibility=v<=0.001?"hidden":"visible";
+}
+
+// dots travelling along an SVG path
+const DOTS=[];
+function dotsFor(pathId,color,n=4){
+  const path=$(pathId), len=path.getTotalLength(), arr=[];
+  for(let i=0;i<n;i++){const d=document.createElement("div");d.className="dot";d.style.background=color;d.style.boxShadow=`0 0 0 6px ${color}33`;$("dots").appendChild(d);arr.push(d)}
+  return {path,len,arr};
+}
+function flow(f,t,a,b){
+  const n=f.arr.length, span=(b-a), gap=span*0.18;
+  f.arr.forEach((d,i)=>{
+    const s=a+i*gap, e=s+span-gap*(n-1);
+    const x=(t-s)/(e-s);
+    if(x<=0||x>=1){d.style.opacity=0;return}
+    const pt=f.path.getPointAtLength(io(x)*f.len);
+    d.style.opacity=Math.min(1,x*6,(1-x)*6);
+    d.style.left=pt.x+"px";d.style.top=pt.y+"px";
+  });
+}
+let F;
+function setupDots(){
+  $("dots").innerHTML="";
+  F={
+    pay1:dotsFor("wClient","#16B862"), spend1:dotsFor("wSpend","#16B862"), save1:dotsFor("wSave","#16B862"),
+    adv:dotsFor("wPool","#41C983"),
+    pay2:dotsFor("wClient","#16B862"), repay:dotsFor("wRepay","#41C983",5), spend2:dotsFor("wSpend","#16B862"), save2:dotsFor("wSave","#16B862"),
+  };
+}
+
+const money=v=>"$"+Math.round(v);
+
+function render(t){
+  // progress bars
+  const bars=document.querySelectorAll("#bars b"), dark=t<SCENES[1][0]||t>=SCENES[5][0];
+  SCENES.forEach(([a,b],i)=>{bars[i].style.width=(P(t,a,b)*100)+"%";bars[i].style.background=dark?"#EAF5EF":"#16B862"});
+
+  // ---------- layers ----------
+  const toDiagram=P(t,4.2,4.8), toOutro=P(t,28.2,28.8);
+  $("intro").style.opacity=1-toDiagram; $("intro").style.visibility=toDiagram>=1?"hidden":"visible";
+  $("diagram").style.opacity=toDiagram*(1-toOutro); $("diagram").style.visibility=(toDiagram<=0||toOutro>=1)?"hidden":"visible";
+  $("outro").style.opacity=toOutro; $("outro").style.visibility=toOutro<=0?"hidden":"visible";
+
+  // ---------- intro ----------
+  show($("iBrand"),t,.15,null,{dy:20});
+  show($("iEye"),t,.5);
+  show($("iH1"),t,.75,null,{dy:60,blur:14});
+  show($("iH2"),t,1.15,null,{dy:60,blur:14});
+  show($("iSub"),t,1.8);
+  show($("iWorks"),t,2.4);
+
+  // ---------- diagram: titles & captions ----------
+  const st=[[4.6,11],[11,18],[18,23],[23,28.6]];
+  st.forEach(([a,b],i)=>{
+    show($("st"+(i+1)),t,a+.15,i<3?b:null,{dy:30,blur:8});
+    show($("cp"+(i+1)),t,a+.5,i<3?b:null,{dy:24,blur:6});
+  });
+
+  // status cards
+  const C=[["c1",5.1,6.9],["c2",6.9,10.9],["c3",11.5,12.6],["c4",12.6,15.9],["c5",15.9,17.9],["c6",18.5,22.9],["c7",23.3,24.9],["c8",24.9,26.3],["c9",26.3,null]];
+  C.forEach(([id,a,b])=>{const el=$(id);el._base="translateX(-50%)";show(el,t,a,b,{dy:26,blur:6,dur:.4})});
+  $("c1pill").textContent=t>6.5?"Paid":"Sent";
+
+  // countdown: real seconds, starting at 72:00:00
+  const left=Math.max(0,72*3600-Math.floor(Math.max(0,t-12.6)*1));
+  const hh=String(Math.floor(left/3600)).padStart(2,"0"),mm=String(Math.floor(left%3600/60)).padStart(2,"0"),ss=String(left%60).padStart(2,"0");
+  $("countdown").textContent=`${hh}:${mm}:${ss}`;
+
+  // ---------- flows ----------
+  flow(F.pay1,t,5.6,6.7);
+  flow(F.spend1,t,7.1,8.3); flow(F.save1,t,7.1,8.3);
+  flow(F.adv,t,19.4,20.6);
+  flow(F.pay2,t,23.6,24.6);
+  flow(F.repay,t,25.0,26.2);
+  flow(F.spend2,t,26.5,27.6); flow(F.save2,t,26.5,27.6);
+
+  // vault pulse on arrival
+  const pulse=Math.max(Math.sin(Math.PI*P(t,6.6,7.1)),Math.sin(Math.PI*P(t,24.5,25)));
+  $("vault").style.transform=`scale(${1+pulse*.08})`;
+  $("vault").style.boxShadow=`0 18px 40px -16px rgba(8,45,28,.6), 0 0 0 ${pulse*18}px rgba(22,184,98,${.25*pulse})`;
+
+  // ---------- numbers ----------
+  const spend = 60*out3(P(t,7.4,8.6)) + 30*out3(P(t,20.0,21.0)) + 42*out3(P(t,26.9,27.9));
+  const save  = 80 + 40*out3(P(t,7.4,8.6)) + 28*out3(P(t,26.9,27.9));
+  const pool  = 50 - 30*out3(P(t,19.8,20.8)) + 30*out3(P(t,25.6,26.5));
+  $("spendAmt").textContent=money(spend);
+  $("saveAmt").textContent=money(save);
+  $("poolAmt").textContent=money(pool);
+  $("saveLiquid").style.height=(save/220*100)+"%";
+  $("poolLiquid").style.height=(pool/60*100)+"%";
+
+  // waiting period: amber tank border + marching amber line to the safe address
+  const wait=P(t,12.6,13.0)*(1-P(t,15.8,16.1));
+  $("saveTank").style.borderColor=wait>0?`rgba(244,181,69,${.3+.7*wait})`:"rgba(11,63,38,.14)";
+  $("saveTank").style.boxShadow=`inset 0 2px 6px rgba(8,45,28,.06), 0 0 0 ${10*wait}px rgba(244,181,69,${.22*wait})`;
+  $("wSafeHot").style.opacity=wait;
+  $("wSafeHot").style.strokeDashoffset=-(t*40);
+
+  // lock while an advance is open
+  const lk=out3(P(t,18.9,19.3))*(1-P(t,26.0,26.4));
+  $("lock").style.opacity=lk;
+
+  // telegram toast slides down
+  const ti=out3(P(t,12.9,13.4)), to=P(t,15.2,15.6);
+  $("toast").style.transform=`translateY(${(1-ti)*-260 - to*260}px)`;
+  $("toast").style.opacity=ti*(1-to);
+
+  // cancel button + tap
+  const btn=$("cancelBtn"); btn._base="translateX(-50%)";
+  show(btn,t,14.1,17.9,{dy:30,blur:6});
+  const press=Math.sin(Math.PI*P(t,15.55,15.85));
+  if(t>14.1&&t<17.9) btn.style.transform=`translateX(-50%) scale(${1-press*.06})`;
+  const fx=P(t,14.9,15.55), fo=P(t,16.0,16.3);
+  $("finger").style.left=lerp(760,560,out3(fx))+"px"; $("finger").style.top=lerp(1660,1515,out3(fx))+"px";
+  $("finger").style.opacity=(fx>0?1:0)*(1-fo)*Math.min(1,fx*5);
+  $("finger").style.transform=`scale(${1-press*.15})`;
+  const rp=P(t,15.65,16.15);
+  $("ripple").style.left="560px";$("ripple").style.top="1515px";
+  $("ripple").style.opacity=rp>0&&rp<1?(1-rp)*.9:0;
+  $("ripple").style.transform=`scale(${1+rp*6})`;
+
+  // ---------- outro ----------
+  show($("oBrand"),t,28.7,null,{dy:20});
+  show($("oEye"),t,29.0);
+  show($("oH"),t,29.2,null,{dy:50,blur:12});
+  ["r1","r2","r3","r4"].forEach((id,i)=>show($(id),t,29.8+i*.35,null,{dy:30,blur:6}));
+  show($("oCta"),t,31.6,null,{dy:30});
+  show($("oFine"),t,32.0,null,{dy:16});
+}
+
+async function ready(){
+  await Promise.all(['800 40px "Bricolage Grotesque"','600 40px "IBM Plex Sans"','400 40px "IBM Plex Sans"','500 40px "IBM Plex Sans"','600 40px "IBM Plex Mono"','500 40px "IBM Plex Mono"'].map(f=>document.fonts.load(f)));
+  await document.fonts.ready;
+  await Promise.all([...document.images].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r})));
+  setupDots();
+  render(0);
+}
+window.__ready=ready();
+window.__render=render;
+window.__duration=DURATION;
+
+// live preview when opened directly (scaled to the window)
+if(!/[?&]capture/.test(location.search)){
+  window.__ready.then(()=>{
+    const fit=()=>{const s=Math.min(innerWidth/1080,innerHeight/1920);$("stage").style.transform=`scale(${s})`};
+    fit(); addEventListener("resize",fit);
+    const t0=performance.now();
+    (function loop(now){render(((now-t0)/1000)%DURATION);requestAnimationFrame(loop)})(t0);
+  });
+}
+</script>
+</body>
+</html>
