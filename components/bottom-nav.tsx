@@ -24,7 +24,7 @@ export default function BottomNav() {
     <nav
       aria-label="Main"
       className="fixed inset-x-3 z-30 mx-auto flex max-w-[436px] items-center gap-1 rounded-[24px] bg-dock p-2 shadow-float ring-1 ring-hairline backdrop-blur-xl"
-      style={{ bottom: "calc(env(safe-area-inset-bottom) + 12px)", viewTransitionName: "bottom-nav" }}
+      style={{ bottom: "calc(env(safe-area-inset-bottom) + 12px)", transform: "translateZ(0)" }}
     >
       {TABS.map(({ href, label, Icon }) => {
         const active = pathname === href;

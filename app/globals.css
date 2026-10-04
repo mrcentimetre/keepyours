@@ -376,16 +376,6 @@ html::before {
 ::view-transition-new(root) {
   animation: none; /* only the page content moves, not the whole window */
 }
-::view-transition-group(bottom-nav) {
-  animation: none;
-  z-index: 100;
-}
-::view-transition-old(bottom-nav) {
-  display: none;
-}
-::view-transition-new(bottom-nav) {
-  animation: none;
-}
 
 /* iPhone push: the new screen slides in from the right edge OVER the old
    one, which drifts a little left and dims. Back is the exact reverse, with
