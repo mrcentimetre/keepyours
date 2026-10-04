@@ -4,13 +4,14 @@ import { useEffect, useLayoutEffect, useState } from "react";
 import { isHydrated } from "@/lib/hydrated";
 import type { Address } from "viem";
 import { toast } from "sonner";
-import { ChevronRight, Fingerprint, Globe, Moon, PieChart, ShieldAlert, Smartphone, Sun, Timer, Wallet } from "lucide-react";
+import { ChevronRight, Fingerprint, Globe, Moon, PieChart, Send, ShieldAlert, Smartphone, Sun, Timer, Wallet } from "lucide-react";
 import { BusyCoin } from "./app/busy-coin";
 import { cn } from "@/lib/utils";
 import { getThemeChoice, setThemeChoice, type ThemeChoice } from "@/lib/theme";
 import { getCachedAddress } from "@/hooks/use-passkey-wallet";
 import { useProfileName } from "@/hooks/use-profile-name";
 import { useVault } from "@/hooks/use-vault";
+import { useTelegram } from "@/hooks/use-telegram";
 import {
   applySettingsCall,
   isVaultConfigured,
@@ -85,6 +86,7 @@ export default function SettingsScreen() {
   // Settings and the shown address come from the vault once it exists.
   const { payTo, state: vault, refresh: refreshVault } = useVault(address);
   const [editOpen, setEditOpen] = useState(false);
+  const telegram = useTelegram(vault?.address ?? null);
   const [busy, setBusy] = useState<"apply" | "cancel" | null>(null);
   const [now, setNow] = useState(Date.now());
 
@@ -262,6 +264,43 @@ export default function SettingsScreen() {
           On iPhone, the clock bar matches after you reopen the app.
         </p>
       </section>
+
+      {vault && telegram.enabled && (
+        <Group
+          label="Alerts"
+          note={
+            telegram.linked
+              ? "Every payment, advance, withdrawal and settings change also goes to Telegram. Send /stop to the bot to turn it off."
+              : "Get a Telegram message for every payment, advance, withdrawal and settings change, so you'd know at once if anything happened you didn't do."
+          }
+        >
+          <button
+            type="button"
+            disabled={telegram.connecting}
+            onClick={async () => {
+              if (!(await telegram.connect())) toast.error("Couldn't open Telegram right now. Try again in a minute.");
+            }}
+            className="w-full text-left active:bg-surface-2"
+          >
+            <Row
+              icon={<Send className="size-[18px]" />}
+              label="Telegram alerts"
+              value={
+                <span className="inline-flex items-center gap-1">
+                  {telegram.connecting ? (
+                    <BusyCoin className="size-4" />
+                  ) : telegram.linked ? (
+                    <span className="text-primary">Connected</span>
+                  ) : (
+                    "Connect"
+                  )}
+                  <ChevronRight className="size-4" />
+                </span>
+              }
+            />
+          </button>
+        </Group>
+      )}
 
       <Group label="Security">
         <Row icon={<Fingerprint className="size-[18px]" />} label="Sign-in" value="Passkey on this device" />
