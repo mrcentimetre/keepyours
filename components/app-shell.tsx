@@ -12,7 +12,7 @@ import BottomNav from "./bottom-nav";
 const NAV_ROUTES = ["/app/home", "/app/withdraw", "/app/advance", "/app/settings"];
 // Screens you step into from a tab (no tab bar of their own, a back button
 // instead), which still need a signed-in wallet.
-const SUB_ROUTES = ["/app/send"];
+const SUB_ROUTES = ["/app/send", "/app/activity"];
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

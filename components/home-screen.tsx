@@ -8,6 +8,7 @@ import {
   ArrowUpFromLine,
   Bell,
   Send,
+  ChevronRight,
   Lock,
   Plus,
   QrCode as QrIcon,
@@ -169,6 +170,8 @@ function HomeSkeleton() {
     </main>
   );
 }
+
+const HOME_ACTIVITY = 5;
 
 export default function HomeScreen() {
   // Coming back to Home (not the first open): everything is cached, so render
@@ -460,7 +463,19 @@ export default function HomeScreen() {
                 </Button>
               </Card>
             ) : (
-              <ActivityList items={activity.slice(0, 20)} now={now} />
+              <>
+                {/* Home shows the latest few; the full history has its own screen. */}
+                <ActivityList items={activity.slice(0, HOME_ACTIVITY)} now={now} />
+                {activity.length > HOME_ACTIVITY && (
+                  <Link
+                    href="/app/activity"
+                    transitionTypes={["nav-forward"]}
+                    className="flex items-center justify-center gap-1 rounded-2xl py-3 text-[14px] font-semibold text-primary active:bg-surface-2"
+                  >
+                    See all activity <ChevronRight className="size-4" />
+                  </Link>
+                )}
+              </>
             )
           ) : payments.length === 0 ? (
             <Card className="flex flex-col items-center gap-3 px-6 py-9 text-center">
