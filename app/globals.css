@@ -394,12 +394,6 @@ html::before {
 ::view-transition-new(.nav-back) {
   animation: 380ms cubic-bezier(0.32, 0.72, 0, 1) both ky-vt-pop-under;
 }
-::view-transition-old(.nav-tab) {
-  animation: 140ms ease-out both ky-vt-fade-out;
-}
-::view-transition-new(.nav-tab) {
-  animation: 200ms ease-out 40ms both ky-vt-fade-in;
-}
 
 @keyframes ky-vt-fade-in { from { opacity: 0; } }
 @keyframes ky-vt-fade-out { to { opacity: 0; } }

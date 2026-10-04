@@ -1,13 +1,12 @@
 import { ViewTransition } from "react";
 
 // Which animation a navigation plays, by the type its <Link> carries:
-// nav-forward slides in from the right (going deeper), nav-back slides back,
-// nav-tab crossfades (tab bar). Anything untyped (first load, browser back,
+// nav-forward slides in from the right (going deeper), nav-back slides back.
+// Tab bar switches are untyped, so instant, like native iOS. Anything untyped (first load, browser back,
 // refreshes) doesn't animate. CSS lives in globals.css under "page transitions".
 const BY_TYPE = {
   "nav-forward": "nav-forward",
   "nav-back": "nav-back",
-  "nav-tab": "nav-tab",
   default: "none",
 };
 
