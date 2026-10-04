@@ -255,7 +255,7 @@ export default function WithdrawScreen() {
 
       <Card className="relative">
         <CardRows>
-          <div className="flex items-center gap-3 px-4 py-3.5">
+          <div className="flex items-center gap-3 px-4 py-5">
             <span className="flex size-10 items-center justify-center rounded-full bg-primary/15 text-primary">
               <Lock className="size-[18px]" />
             </span>
@@ -268,7 +268,7 @@ export default function WithdrawScreen() {
               <p className="text-[11.5px] text-muted-foreground">available</p>
             </div>
           </div>
-          <div className="flex items-center gap-3 px-4 py-3.5">
+          <div className="flex items-center gap-3 px-4 py-5">
             <WalletAvatar address={address} size={40} />
             <div className="min-w-0 flex-1">
               <p className="text-[12px] text-muted-foreground">To</p>
