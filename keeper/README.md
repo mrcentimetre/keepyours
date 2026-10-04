@@ -5,7 +5,8 @@ A small Node service for the VPS. Every 15 seconds it:
 1. finds every vault the factory has made,
 2. calls `process()` on vaults holding unsplit USDC, so payments split even when nobody has the app open,
 3. calls `settle()` on advances past their third fee period,
-4. sends a **web push** for every new on-chain event on a vault with a registered phone, so notifications arrive with the app closed.
+4. sends a **web push** for every new on-chain event on a vault with a registered phone, so notifications arrive with the app closed,
+5. with `TELEGRAM_BOT_TOKEN` set, runs the Telegram bot: people connect from Settings → Telegram alerts, then get the same alerts in Telegram, plus `/status` and `/stop`.
 
 It also serves `POST /subscribe` (used by the app's `/api/push` route on Vercel, guarded by a shared secret) and `GET /health`.
 

@@ -15,6 +15,7 @@ import { createPublicClient, createWalletClient, formatUnits, http, parseAbi, pa
 import { privateKeyToAccount } from "viem/accounts";
 import { arbitrumSepolia } from "viem/chains";
 import webpush from "web-push";
+import { createTelegram } from "./telegram.mjs";
 
 const env = (k, fallback) => {
   const v = process.env[k] ?? fallback;
@@ -74,7 +75,13 @@ const ev = {
   settingsProposed: parseAbiItem("event SettingsProposed(address indexed vault, uint64 applyAt)"),
   settingsApplied: parseAbiItem("event SettingsApplied(address indexed vault)"),
 };
-const vaultAbi = parseAbi(["function process()", "function unprocessed() view returns (uint256)"]);
+const vaultAbi = parseAbi([
+  "function process()",
+  "function unprocessed() view returns (uint256)",
+  "function saved() view returns (uint256)",
+  "function pendingWithdraw() view returns ((uint256 amount, uint64 requestedAt, uint64 releaseAt))",
+]);
+const erc20Abi = parseAbi(["function balanceOf(address) view returns (uint256)"]);
 const poolAbi = parseAbi([
   "function settle(address vault)",
   "function loans(address vault) view returns (uint128 principal, uint64 start)",
@@ -85,6 +92,39 @@ const usd = (raw) => Number(formatUnits(raw, 6));
 const $ = (n) => `$${n.toFixed(2)}`;
 
 let period = null;
+
+// ── telegram (optional: only with TELEGRAM_BOT_TOKEN) ───────────
+
+async function vaultStatus(v) {
+  const owner = state.vaults[v];
+  const [saved, pending, wallet, loan] = await pub.multicall({
+    allowFailure: false,
+    contracts: [
+      { address: v, abi: vaultAbi, functionName: "saved" },
+      { address: v, abi: vaultAbi, functionName: "pendingWithdraw" },
+      { address: USDC, abi: erc20Abi, functionName: "balanceOf", args: [owner] },
+      { address: POOL, abi: poolAbi, functionName: "loans", args: [v] },
+    ],
+  });
+  const lines = [`<b>Your vault</b> ${v.slice(0, 6)}…${v.slice(-4)}`, `Kept: ${$(usd(saved))}`, `To spend: ${$(usd(wallet))}`];
+  if (pending.amount > 0n) {
+    const left = Number(pending.releaseAt) * 1000 - Date.now();
+    lines.push(`Withdrawal: ${$(usd(pending.amount))} ${left > 0 ? `· ${Math.ceil(left / 60000)} min left` : "· ready"}`);
+  }
+  if (loan[0] > 0n) lines.push(`Advance open: ${$(usd(loan[0]))}`);
+  return lines;
+}
+
+const telegram = process.env.TELEGRAM_BOT_TOKEN
+  ? createTelegram({
+      token: process.env.TELEGRAM_BOT_TOKEN,
+      state,
+      save,
+      log,
+      status: vaultStatus,
+      txUrl: (hash) => `${chain.blockExplorers.default.url}/tx/${hash}`,
+    })
+  : null;
 
 async function discoverVaults(from, to) {
   const logs = await pub.getLogs({ address: FACTORY, event: ev.created, fromBlock: from, toBlock: to });
@@ -162,7 +202,9 @@ function text(kind, a) {
 
 /** New events on vaults that have a registered phone, oldest first. */
 async function newEvents(from, to) {
-  const watched = Object.keys(state.subs).filter((v) => state.subs[v]?.length && state.vaults[v]);
+  const watched = [
+    ...new Set([...Object.keys(state.subs).filter((v) => state.subs[v]?.length), ...(telegram?.watched() ?? [])]),
+  ].filter((v) => state.vaults[v]);
   if (!watched.length) return [];
   const owners = watched.map((v) => state.vaults[v]);
   const range = { fromBlock: from, toBlock: to };
@@ -182,7 +224,7 @@ async function newEvents(from, to) {
   const ownerToVault = Object.fromEntries(watched.map((v) => [state.vaults[v], v]));
   const own = new Set([...watched, POOL.toLowerCase()]);
   const items = [];
-  const at = (l) => ({ id: `${l.transactionHash}-${l.logIndex}`, block: l.blockNumber, index: l.logIndex });
+  const at = (l) => ({ id: `${l.transactionHash}-${l.logIndex}`, tx: l.transactionHash, block: l.blockNumber, index: l.logIndex });
   const vaultOf = (l) => (l.args.vault ?? l.address).toLowerCase();
 
   for (const l of processed)
@@ -241,7 +283,10 @@ async function tick() {
     if (from <= latest) {
       await discoverVaults(from, latest);
       if (state.lastBlock !== null) {
-        for (const item of await newEvents(from, latest)) await push(item);
+        for (const item of await newEvents(from, latest)) {
+          await push(item);
+          await telegram?.notify(item.vault, text(item.kind, item.a), item.tx);
+        }
       }
       state.lastBlock = latest.toString();
       save();
@@ -264,8 +309,36 @@ createServer((req, res) => {
     res.end(JSON.stringify(body));
   };
   if (req.method === "GET" && req.url === "/health") return reply(200, { ok: true, vaults: Object.keys(state.vaults).length });
-  if (req.method !== "POST" || req.url !== "/subscribe") return reply(404, { error: "not found" });
   if (req.headers["x-keeper-secret"] !== SECRET) return reply(401, { error: "unauthorised" });
+
+  const url = new URL(req.url, "http://keeper");
+  const isVault = (v) => typeof v === "string" && /^0x[0-9a-fA-F]{40}$/.test(v);
+
+  // Telegram: is this vault connected, and a one-time code to connect it.
+  if (url.pathname === "/telegram/status" && req.method === "GET") {
+    const v = url.searchParams.get("vault");
+    if (!isVault(v)) return reply(400, { error: "bad vault" });
+    return reply(200, { enabled: Boolean(telegram?.username), bot: telegram?.username ?? null, linked: telegram?.linked(v.toLowerCase()) ?? false });
+  }
+  if (url.pathname === "/telegram/link" && req.method === "POST") {
+    let raw = "";
+    req.on("data", (c) => {
+      raw += c;
+      if (raw.length > 1000) req.destroy();
+    });
+    req.on("end", () => {
+      try {
+        const { vault } = JSON.parse(raw);
+        if (!isVault(vault) || !state.vaults[vault.toLowerCase()]) return reply(400, { error: "unknown vault" });
+        if (!telegram?.username) return reply(503, { error: "telegram not configured" });
+        reply(200, { bot: telegram.username, code: telegram.linkCode(vault.toLowerCase()) });
+      } catch {
+        reply(400, { error: "bad json" });
+      }
+    });
+    return;
+  }
+  if (req.method !== "POST" || url.pathname !== "/subscribe") return reply(404, { error: "not found" });
 
   let body = "";
   req.on("data", (c) => {
@@ -292,3 +365,4 @@ createServer((req, res) => {
 
 tick();
 setInterval(tick, TICK_MS);
+telegram?.start().catch((e) => log("telegram failed to start:", e.message));
