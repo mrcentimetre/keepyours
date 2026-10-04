@@ -279,11 +279,8 @@ export default function SettingsScreen() {
 
       <div className="pt-2 text-center text-[12px] text-muted-foreground">
         <p>Keep Yours · Get paid. Keep yours.</p>
-        {(process.env.NEXT_PUBLIC_APP_VERSION || process.env.NEXT_PUBLIC_APP_COMMIT) && (
-          <p className="mt-1 font-mono text-[11px] tabular-nums opacity-80">
-            {process.env.NEXT_PUBLIC_APP_VERSION ? `v${process.env.NEXT_PUBLIC_APP_VERSION}` : "dev"}
-            {process.env.NEXT_PUBLIC_APP_COMMIT ? ` · ${process.env.NEXT_PUBLIC_APP_COMMIT}` : ""}
-          </p>
+        {process.env.NEXT_PUBLIC_APP_VERSION && (
+          <p className="mt-1 font-mono text-[11px] tabular-nums opacity-80">v{process.env.NEXT_PUBLIC_APP_VERSION}</p>
         )}
       </div>
     </Screen>
