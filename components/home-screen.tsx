@@ -326,7 +326,7 @@ export default function HomeScreen() {
             >
               <Bell />
               {(vault ? unread > 0 : alerts.length > 0) && (
-                <span className="absolute top-2.5 right-2.5 size-2 rounded-full bg-warning ring-2 ring-[#0d4429]" />
+                <span aria-label="New activity" className="absolute top-2.5 right-2.5 size-2 rounded-full bg-white shadow-[0_0_6px_rgba(98,230,160,0.9)]" />
               )}
             </Button>
           </div>
